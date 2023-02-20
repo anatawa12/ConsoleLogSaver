@@ -85,7 +85,7 @@ header sectionでは以下の必須なフィールドがあります。
 - `Mode: ` そのログの要素のメタデータ。1になっているビットの名前の羅列
 - `Mode-Raw: ` そのログの要素のメタデータの16進数表記
 
-[saver-unitypackage-download]: https://github.com/anatawa12/CompileLogSaver/releases/latest/download/saver.unitypackage
+[saver-unitypackage-download]: https://github.com/anatawa12/ConsoleLogSaver/releases/latest/download/saver.unitypackage
 [pastebin.com]: https://pastebin.com/
 [unity-build-target]: https://docs.unity3d.com/2021.2/ScriptReference/EditorUserBuildSettings-activeBuildTarget.html
 

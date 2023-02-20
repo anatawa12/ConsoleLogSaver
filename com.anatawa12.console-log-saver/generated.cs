@@ -71,6 +71,17 @@ namespace anatawa12.gists
             });
         delegate int StartGettingEntriesDelegate(
         );
+        public static int consoleFlags
+        {
+            get => consoleFlagsGetter();
+            set => consoleFlagsSetter(value);
+        }
+        private static readonly consoleFlagsGetterDelegate consoleFlagsGetter =
+            ReflectionWrapperUtil.CreateStaticPropertyGetter<consoleFlagsGetterDelegate>(BackedType, typeof(int), "consoleFlags");
+        private static readonly consoleFlagsSetterDelegate consoleFlagsSetter =
+            ReflectionWrapperUtil.CreateStaticPropertySetter<consoleFlagsSetterDelegate>(BackedType, typeof(int), "consoleFlags");
+        delegate int consoleFlagsGetterDelegate();
+        delegate void consoleFlagsSetterDelegate(int value);
         public static void SetConsoleFlag(
             int bit, 
             bool value

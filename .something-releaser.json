@@ -1,0 +1,8 @@
+{
+  "releaseChanger": [
+    {
+      "changer": "gradle-properties",
+      "path": "com.anatawa12.console-log-saver/version.txt"
+    }
+  ]
+}

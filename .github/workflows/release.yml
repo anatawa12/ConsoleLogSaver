@@ -68,7 +68,6 @@ jobs:
           # upload release assets
           gh release create "v$VERSION" \
             "build/saver.unitypackage" \
-            "package.json" \
 
       - name: prepare next release & push
         if: ${{ inputs.publish }}

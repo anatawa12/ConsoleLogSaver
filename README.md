@@ -44,6 +44,8 @@ Also, header section may have the following optional field.
 - `Build-Target: ` The [current build target][unity-build-target] ログを収集した時点でのビルド対象
 - `Editor-Platform: ` The OS information of the Unity Editor
 - `Hidden-Data: ` The data may be hidden (replaced with some text) in the log
+- `Upm-Dependency: ` Installed (locked) [Unity Package Manager][UPM] packages
+- `Vpm-Dependency: ` Installed (locked) [VRChat Package Manager][VPM] packages
 
 In each content section, there is a required field.
 
@@ -75,6 +77,8 @@ header sectionでは以下の必須なフィールドがあります。
 - `Build-Target: ` ログを収集した時点での[ビルド対象][unity-build-target]
 - `Editor-Platform: ` UnityEditorを実行している環境
 - `Hidden-Data: ` ログの内容で隠されてる可能性のある情報
+- `Upm-Dependency: ` インストールされてる (locked) [Unity Package Manager][UPM] のパッケージ
+- `Vpm-Dependency: ` インストールされてる (locked) [VRChat Package Manager][VPM] のパッケージ
 
 各 content section では以下の必須なフィールドがあります。
 
@@ -88,4 +92,6 @@ header sectionでは以下の必須なフィールドがあります。
 [saver-unitypackage-download]: https://github.com/anatawa12/ConsoleLogSaver/releases/latest/download/saver.unitypackage
 [pastebin.com]: https://pastebin.com/
 [unity-build-target]: https://docs.unity3d.com/2021.2/ScriptReference/EditorUserBuildSettings-activeBuildTarget.html
+[UPM]: https://docs.unity3d.com/Manual/Packages.html
+[VPM]: https://vcc.docs.vrchat.com/vpm/
 

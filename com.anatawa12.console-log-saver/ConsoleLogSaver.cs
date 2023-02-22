@@ -127,14 +127,11 @@ namespace anatawa12.gists
                     case UpmDependencyType.GitGit:
                         // it's a remote one: It's very rarely to have personal info in version name.
                         needsReplace = false;
-                        builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(version).Append('\n');
                         break;
 
                     case UpmDependencyType.FileGit:
                         // It's likely to have personal info in absolute paths so hide it
                         needsReplace = true;
-                        builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(ReplaceMessage(version))
-                            .Append('\n');
                         break;
 
                     case UpmDependencyType.FileRelative:

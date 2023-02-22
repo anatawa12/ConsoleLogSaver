@@ -83,6 +83,8 @@ namespace anatawa12.gists
             if (!hideOsInfo) builder.Append("Editor-Platform: ").Append(RuntimeInformation.OSDescription).Append('\n');
             if (hideUserName) builder.Append("Hidden-Data: user-name\n");
             if (hideUserHome) builder.Append("Hidden-Data: user-home\n");
+            AppendUpm(builder);
+            AppendVpm(builder);
             builder.Append('\n');
             builder.Append(separator).Append('\n');
 
@@ -103,6 +105,59 @@ namespace anatawa12.gists
             }
             
             return builder.ToString(); 
+        }
+
+        private void AppendUpm(StringBuilder builder)
+        {
+            foreach (var (package, type, version) in PackageManagerInfoCollector.UpmLockedPackages())
+            {
+                bool needsReplace;
+                switch (type)
+                {
+                    case UpmDependencyType.Upm:
+                    case UpmDependencyType.HttpsGit:
+                    case UpmDependencyType.SshGit:
+                    case UpmDependencyType.GitGit:
+                        // it's a remote one: It's very rarely to have personal info in version name.
+                        needsReplace = false;
+                        builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(version).Append('\n');
+                        break;
+
+                    case UpmDependencyType.FileGit:
+                        // It's likely to have personal info in absolute paths so hide it
+                        needsReplace = true;
+                        builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(ReplaceMessage(version))
+                            .Append('\n');
+                        break;
+
+                    case UpmDependencyType.FileRelative:
+                        // It's rarely to have personal info in relative paths.
+                        needsReplace = version.StartsWith("file:../..") || version.StartsWith("file:..\\..");
+                        break;
+                    case UpmDependencyType.FileAbsolute:
+                        // It's likely to have personal info in absolute paths so hide it
+                        needsReplace = true;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                if (needsReplace)
+                    builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(ReplaceMessage(version))
+                        .Append('\n');
+                else
+                    builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(version).Append('\n');
+            }
+        }
+
+        private void AppendVpm(StringBuilder builder)
+        {
+            foreach (var (package, version) in PackageManagerInfoCollector.VpmLockedPackages())
+            {
+                // for vpm dependency, everything including local packages are identified using package id so
+                // it's not likely to include personal info.
+                builder.Append("Vpm-Dependency: ").Append(package).Append('@').Append(version).Append('\n');
+            }
         }
 
         private Regex _homePatternRegex;
@@ -128,10 +183,10 @@ namespace anatawa12.gists
 
         private string ReplaceMessage(string str)
         {
-            if (_namePatternRegex != null)
-                str = _namePatternRegex.Replace(str, "${user-name}");
             if (_homePatternRegex != null)
                 str = _homePatternRegex.Replace(str, "${user-home}");
+            if (_namePatternRegex != null)
+                str = _namePatternRegex.Replace(str, "${user-name}");
             return str;
         }
 

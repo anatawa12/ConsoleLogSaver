@@ -69,6 +69,11 @@ namespace anatawa12.gists
         private string Generate()
         {
             InitRegex();
+            var backupFlags = LogEntries.consoleFlags;
+            LogEntries.SetConsoleFlag((int) ConsoleFlags.Collapse, false);
+            LogEntries.SetConsoleFlag((int) ConsoleFlags.LogLevelLog, true);
+            LogEntries.SetConsoleFlag((int) ConsoleFlags.LogLevelError, true);
+            LogEntries.SetConsoleFlag((int) ConsoleFlags.LogLevelWarning, true);
 
             var separator = 
                 "================" 
@@ -103,6 +108,8 @@ namespace anatawa12.gists
                     builder.Append(separator).Append('\n');
                 }
             }
+
+            LogEntries.consoleFlags = backupFlags;
             
             return builder.ToString(); 
         }
@@ -227,6 +234,26 @@ namespace anatawa12.gists
         VisualScriptingError = 1 << 22
     }
 
+    [Flags]
+    enum ConsoleFlags
+    {
+        Collapse = 1 << 0,
+        ClearOnPlay = 1 << 1,
+        ErrorPause = 1 << 2,
+        Verbose = 1 << 3,
+        StopForAssert = 1 << 4,
+        StopForError = 1 << 5,
+        Autoscroll = 1 << 6,
+        LogLevelLog = 1 << 7,
+        LogLevelWarning = 1 << 8,
+        LogLevelError = 1 << 9,
+        ShowTimestamp = 1 << 10,
+        ClearOnBuild = 1 << 11,
+        ClearOnRecompile = 1 << 12,
+        UseMonospaceFont = 1 << 13,
+        StripLoggingCallstack = 1 << 14,
+    }
+
     internal struct GettingLogEntriesScope : IDisposable
     {
         private bool _disposed;
@@ -257,6 +284,11 @@ namespace anatawa12.gists
             var m = type.GetMethod(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null,
                         actualType, null)
                     ?? throw new Exception("method not found");
+            return CreateStaticMethod<T>(m, parameters);
+        }
+
+        private static T CreateStaticMethod<T>(MethodInfo m, Type[] parameters)
+        {
             var args = parameters.Select((t, i) => Expression.Parameter(t, $"param{i}")).ToArray();
             var argsValues = args.Select((arg, i) =>
                     arg.Type == typeof(LogEntry)
@@ -286,6 +318,22 @@ namespace anatawa12.gists
                 Expression.Assign(Expression.Field(Expression.Convert(self, backedType), f), value), 
                 self, value)
                 .Compile();
+        }
+
+        public static T CreateStaticPropertyGetter<T>(Type backedType, Type type, string name)
+        {
+            var prop = backedType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+                       ?? throw new Exception("property not found");
+            var method = prop.GetMethod;
+            return CreateStaticMethod<T>(method, Type.EmptyTypes);
+        }
+
+        public static T CreateStaticPropertySetter<T>(Type backedType, Type type, string name)
+        {
+            var prop = backedType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+                       ?? throw new Exception("property not found");
+            var method = prop.SetMethod;
+            return CreateStaticMethod<T>(method, new []{type});
         }
     }
 

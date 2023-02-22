@@ -10,7 +10,7 @@ genSFunc("void", "OpenFileOnSpecificLineAndColumn", [["string", "filePath"], ["i
 genSFunc("string", "GetStatusText", []);
 genSFunc("int", "GetStatusMask", []);
 genSFunc("int", "StartGettingEntries", []);
-//genProp("int", "consoleFlags");
+genSProp("int", "consoleFlags");
 genSFunc("void", "SetConsoleFlag", [["int", "bit"], ["bool", "value"]]);
 genSFunc("void", "SetFilteringText", [["string", "filteringText"]]);
 genSFunc("string", "GetFilteringText", []);
@@ -96,4 +96,18 @@ function genIField(type: string, name: string) {
     console.log(`            ReflectionWrapperUtil.CreateInstanceFieldSetter<${name}SetterDelegate>(BackedType, typeof(${type}), "${name}");`)
     console.log(`        delegate ${type} ${name}GetterDelegate(object self);`)
     console.log(`        delegate void ${name}SetterDelegate(object self, ${type} value);`)
+}
+
+function genSProp(type: string, name: string) {
+    console.log(`        public static ${type} ${name}`)
+    console.log(`        {`)
+    console.log(`            get => ${name}Getter();`);
+    console.log(`            set => ${name}Setter(value);`);
+    console.log(`        }`)
+    console.log(`        private static readonly ${name}GetterDelegate ${name}Getter =`)
+    console.log(`            ReflectionWrapperUtil.CreateStaticPropertyGetter<${name}GetterDelegate>(BackedType, typeof(${type}), "${name}");`)
+    console.log(`        private static readonly ${name}SetterDelegate ${name}Setter =`)
+    console.log(`            ReflectionWrapperUtil.CreateStaticPropertySetter<${name}SetterDelegate>(BackedType, typeof(${type}), "${name}");`)
+    console.log(`        delegate ${type} ${name}GetterDelegate();`)
+    console.log(`        delegate void ${name}SetterDelegate(${type} value);`)
 }

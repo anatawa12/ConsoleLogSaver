@@ -5,35 +5,35 @@ console.log("namespace anatawa12.gists")
 console.log("{")
 console.log("    static partial class LogEntries")
 console.log("    {")
-genSFunc("void", "RowGotDoubleClicked", [["int", "index"]]);
-genSFunc("void", "OpenFileOnSpecificLineAndColumn", [["string", "filePath"], ["int", "line"], ["int", "column"]]);
-genSFunc("string", "GetStatusText", []);
-genSFunc("int", "GetStatusMask", []);
+//genSFunc("void", "RowGotDoubleClicked", [["int", "index"]]);
+//genSFunc("void", "OpenFileOnSpecificLineAndColumn", [["string", "filePath"], ["int", "line"], ["int", "column"]]);
+//genSFunc("string", "GetStatusText", []);
+//genSFunc("int", "GetStatusMask", []);
 genSFunc("int", "StartGettingEntries", []);
 genSProp("int", "consoleFlags");
 genSFunc("void", "SetConsoleFlag", [["int", "bit"], ["bool", "value"]]);
-genSFunc("void", "SetFilteringText", [["string", "filteringText"]]);
-genSFunc("string", "GetFilteringText", []);
+//genSFunc("void", "SetFilteringText", [["string", "filteringText"]]);
+//genSFunc("string", "GetFilteringText", []);
 genSFunc("void", "EndGettingEntries", []);
-genSFunc("int", "GetCount", []);
-genSFunc("void", "GetCountsByType", [["ref", "int", "errorCount"], ["ref", "int", "warningCount"], ["ref", "int", "logCount"]]);
-genSFunc("void", "GetLinesAndModeFromEntryInternal", [["int", "row"], ["int", "numberOfLines"], ["ref", "int", "mask"], ["ref", "string", "outString"]]);
+//genSFunc("int", "GetCount", []);
+//genSFunc("void", "GetCountsByType", [["ref", "int", "errorCount"], ["ref", "int", "warningCount"], ["ref", "int", "logCount"]]);
+//genSFunc("void", "GetLinesAndModeFromEntryInternal", [["int", "row"], ["int", "numberOfLines"], ["ref", "int", "mask"], ["ref", "string", "outString"]]);
 genSFunc("bool", "GetEntryInternal", [["int", "row"], ["LogEntry", "outputEntry"]]);
-genSFunc("int", "GetEntryCount", [["int", "row"]]);
-genSFunc("void", "Clear", []);
-genSFunc("int", "GetStatusViewErrorIndex", []);
-genSFunc("void", "ClickStatusBar", [["int", "count"]]);
-genSFunc("void", "AddMessageWithDoubleClickCallback", [["LogEntry", "outputEntry"]]);
+//genSFunc("int", "GetEntryCount", [["int", "row"]]);
+//genSFunc("void", "Clear", []);
+//genSFunc("int", "GetStatusViewErrorIndex", []);
+//genSFunc("void", "ClickStatusBar", [["int", "count"]]);
+//genSFunc("void", "AddMessageWithDoubleClickCallback", [["LogEntry", "outputEntry"]]);
 console.log("    }")
 console.log("    partial struct LogEntry")
 console.log("    {")
 genIField("string", "message");
-genIField("string", "file");
-genIField("int", "line");
-genIField("int", "column");
+//genIField("string", "file");
+//genIField("int", "line");
+//genIField("int", "column");
 genIField("int", "mode");
-genIField("int", "instanceID");
-genIField("int", "identifier");
+//genIField("int", "instanceID");
+//genIField("int", "identifier");
 console.log("    }")
 console.log("}")
 

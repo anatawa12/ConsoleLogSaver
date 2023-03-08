@@ -42,10 +42,10 @@ namespace anatawa12.gists
         {
             _serializedObject.Update();
             GUILayout.Label("ConsoleLogSaver");
-            L10N.DrawLanguagePicker();
-            EditorGUILayout.LabelField(L10N.Tr("heading:Security Settings"));
+            CL4EE.DrawLanguagePicker();
+            EditorGUILayout.LabelField(CL4EE.Tr("heading:Security Settings"));
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUILayout.Toggle(L10N.Tr("prop:Unity Version (required)"), true);
+            EditorGUILayout.Toggle(CL4EE.Tr("prop:Unity Version (required)"), true);
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.PropertyField(_hideOsInfoProp);
             EditorGUILayout.PropertyField(_hideUserNameProp);
@@ -58,21 +58,21 @@ namespace anatawa12.gists
                 EditorUtility.DisplayDialog("Error", "Not Implemented yet", "OK");
             }
             */
-            if (GUILayout.Button(L10N.Tr("button:Save to File")))
+            if (GUILayout.Button(CL4EE.Tr("button:Save to File")))
             {
-                var path = EditorUtility.SaveFilePanel(L10N.Tr("dialog:title:Save to File"),
+                var path = EditorUtility.SaveFilePanel(CL4EE.Tr("dialog:title:Save to File"),
                     ".", "logfile.txt", "txt");
                 if (!string.IsNullOrEmpty(path))
                 {
                     File.WriteAllText(path, Generate(), Encoding.UTF8);
                 }
             }
-            if (GUILayout.Button(L10N.Tr("button:Copy to Clipboard")))
+            if (GUILayout.Button(CL4EE.Tr("button:Copy to Clipboard")))
             {
                 GUIUtility.systemCopyBuffer = Generate();
-                EditorUtility.DisplayDialog(L10N.Tr("dialog:title:Copied"), 
-                    L10N.Tr("dialog:message:Copied"), 
-                    L10N.Tr("dialog:ok:Copied"));
+                EditorUtility.DisplayDialog(CL4EE.Tr("dialog:title:Copied"), 
+                    CL4EE.Tr("dialog:message:Copied"), 
+                    CL4EE.Tr("dialog:ok:Copied"));
             }
             GUILayout.EndHorizontal();
         }

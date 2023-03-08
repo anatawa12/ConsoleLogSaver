@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using CustomLocalization4EditorExtension;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,8 +14,16 @@ namespace anatawa12.gists
 {
     internal class ConsoleLogSaverSetting : EditorWindow
     {
+        [AssemblyCL4EELocalization]
+        private static Localization Localization { get; }
+            = new Localization("53b154bd853b4ecc893fc10c47694084", "ja");
+
+        [CL4EELocalePicker(typeof(ConsoleLogSaverSetting))]
+        [CL4EELocalized("prop:Hide OS Info")]
         public bool hideOsInfo = false;
+        [CL4EELocalized("prop:Hide User Name")]
         public bool hideUserName = true;
+        [CL4EELocalized("prop:Hide Home Folder")]
         public bool hideUserHome = true;
 
         private SerializedObject _serializedObject;
@@ -36,7 +45,7 @@ namespace anatawa12.gists
             EditorGUILayout.LabelField("Security Setting");
             _serializedObject.Update();
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUILayout.Toggle("Unity Version (required)", true);
+            EditorGUILayout.Toggle(L10N.Tr("prop:Unity Version (required)"), true);
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.PropertyField(_hideOsInfoProp);
             EditorGUILayout.PropertyField(_hideUserNameProp);
@@ -49,19 +58,21 @@ namespace anatawa12.gists
                 EditorUtility.DisplayDialog("Error", "Not Implemented yet", "OK");
             }
             */
-            if (GUILayout.Button("Save to File"))
+            if (GUILayout.Button(L10N.Tr("button:Save to File")))
             {
-                var path = EditorUtility.SaveFilePanel("Save logs to File",
+                var path = EditorUtility.SaveFilePanel(L10N.Tr("dialog:title:Save to File"),
                     ".", "logfile.txt", "txt");
                 if (!string.IsNullOrEmpty(path))
                 {
                     File.WriteAllText(path, Generate(), Encoding.UTF8);
                 }
             }
-            if (GUILayout.Button("Copy to Clipboard"))
+            if (GUILayout.Button(L10N.Tr("button:Copy to Clipboard")))
             {
                 GUIUtility.systemCopyBuffer = Generate();
-                EditorUtility.DisplayDialog("Copied!", "Copied log info to clipboard done!", "OK");
+                EditorUtility.DisplayDialog(L10N.Tr("dialog:title:Copied"), 
+                    L10N.Tr("dialog:message:Copied"), 
+                    L10N.Tr("dialog:ok:Copied"));
             }
             GUILayout.EndHorizontal();
         }

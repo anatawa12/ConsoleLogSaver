@@ -1,3 +1,6 @@
 [submodule "SimpleJson~"]
 	path = SimpleJson~
 	url = https://github.com/anatawa12/SimpleJson.git
+[submodule "CustomLocalization4EditorExtension~"]
+	path = CustomLocalization4EditorExtension~
+	url = https://github.com/anatawa12/CustomLocalization4EditorExtension

@@ -20,9 +20,6 @@ msgstr "ユーザ名を隠す"
 msgid "prop:Hide Home Folder"
 msgstr "ホームフォルダを隠す"
 
-msgid "prop:Test Ranged"
-msgstr "レンジテスト"
-
 msgid "button:Save to File"
 msgstr "ファイルに保存する"
 

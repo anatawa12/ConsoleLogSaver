@@ -5,6 +5,9 @@ msgstr ""
 msgid "locale:en"
 msgstr "English"
 
+msgid "heading:Security Settings"
+msgstr "Security Settings"
+
 msgid "prop:Unity Version (required)"
 msgstr "Unity Version (required)"
 

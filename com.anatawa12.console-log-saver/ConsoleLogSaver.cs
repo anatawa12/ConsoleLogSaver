@@ -18,7 +18,6 @@ namespace anatawa12.gists
         private static Localization Localization { get; }
             = new Localization("53b154bd853b4ecc893fc10c47694084", "ja");
 
-        [CL4EELocalePicker(typeof(ConsoleLogSaverSetting))]
         [CL4EELocalized("prop:Hide OS Info")]
         public bool hideOsInfo = false;
         [CL4EELocalized("prop:Hide User Name")]
@@ -41,9 +40,10 @@ namespace anatawa12.gists
 
         private void OnGUI()
         {
-            GUILayout.Label("ConsoleLogSaver");
-            EditorGUILayout.LabelField("Security Setting");
             _serializedObject.Update();
+            GUILayout.Label("ConsoleLogSaver");
+            L10N.DrawLanguagePicker();
+            EditorGUILayout.LabelField(L10N.Tr("heading:Security Settings"));
             EditorGUI.BeginDisabledGroup(true);
             EditorGUILayout.Toggle(L10N.Tr("prop:Unity Version (required)"), true);
             EditorGUI.EndDisabledGroup();

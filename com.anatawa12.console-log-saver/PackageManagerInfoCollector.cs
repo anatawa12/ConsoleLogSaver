@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using Anatawa12.SimpleJson;
 
-namespace anatawa12.gists
+namespace Anatawa12.ConsoleLogSaver
 {
     static class PackageManagerInfoCollector
     {

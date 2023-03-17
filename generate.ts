@@ -1,7 +1,7 @@
 console.log("// generated")
 console.log("// ReSharper disable InconsistentNaming")
 console.log("// ReSharper disable RedundantNameQualifier")
-console.log("namespace anatawa12.gists")
+console.log("namespace Anatawa12.ConsoleLogSaver")
 console.log("{")
 console.log("    static partial class LogEntries")
 console.log("    {")

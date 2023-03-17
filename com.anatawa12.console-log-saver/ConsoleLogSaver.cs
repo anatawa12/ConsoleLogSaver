@@ -10,7 +10,7 @@ using CustomLocalization4EditorExtension;
 using UnityEditor;
 using UnityEngine;
 
-namespace anatawa12.gists
+namespace Anatawa12.ConsoleLogSaver
 {
     internal class ConsoleLogSaverSetting : EditorWindow
     {

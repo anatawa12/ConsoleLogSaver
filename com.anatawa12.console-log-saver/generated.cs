@@ -1,7 +1,7 @@
 // generated
 // ReSharper disable InconsistentNaming
 // ReSharper disable RedundantNameQualifier
-namespace anatawa12.gists
+namespace Anatawa12.ConsoleLogSaver
 {
     static partial class LogEntries
     {

@@ -86,23 +86,15 @@ namespace Anatawa12.ConsoleLogSaver
             LogEntries.SetConsoleFlag((int) ConsoleFlags.LogLevelError, true);
             LogEntries.SetConsoleFlag((int) ConsoleFlags.LogLevelWarning, true);
 
-            var separator = 
-                "================" 
-                + GUID.Generate().ToString().Replace("-", "") 
-                + "================";
-            var builder = new StringBuilder();
+            var fileBuilder = new ConsoleLogFileV1.Builder();
             // header
-            builder.Append("ConsoleLogSaverData/1.0\n");
-            builder.Append("Separator: ").Append(separator).Append('\n');
-            builder.Append("Unity-Version: ").Append(Application.unityVersion).Append('\n');
-            builder.Append("Build-Target: ").Append(EditorUserBuildSettings.activeBuildTarget).Append('\n');
-            if (!hideOsInfo) builder.Append("Editor-Platform: ").Append(RuntimeInformation.OSDescription).Append('\n');
-            if (hideUserName) builder.Append("Hidden-Data: user-name\n");
-            if (hideUserHome) builder.Append("Hidden-Data: user-home\n");
-            AppendUpm(builder);
-            AppendVpm(builder);
-            builder.Append('\n');
-            builder.Append(separator).Append('\n');
+            fileBuilder.AddField("Unity-Version", Application.unityVersion);
+            fileBuilder.AddField("Build-Target", EditorUserBuildSettings.activeBuildTarget.ToString());
+            if (!hideOsInfo) fileBuilder.AddField("Editor-Platform", RuntimeInformation.OSDescription);
+            if (hideUserName) fileBuilder.AddField("Hidden-Data", "user-name");
+            if (hideUserHome) fileBuilder.AddField("Hidden-Data", "user-home");
+            AppendUpm(fileBuilder);
+            AppendVpm(fileBuilder);
 
             using (var scope = new GettingLogEntriesScope(0))
             {
@@ -111,21 +103,19 @@ namespace Anatawa12.ConsoleLogSaver
                 {
                     LogEntries.GetEntryInternal(i, entry);
                     var mode = entry.mode;
-                    builder.Append("Content: log-element\n");
-                    builder.Append("Mode: ").Append((Mode)mode).Append('\n');
-                    builder.Append("Mode-Raw: ").Append($"{mode:x08}").Append('\n');
-                    builder.Append('\n');
-                    builder.Append(ReplaceMessage(entry.message));
-                    builder.Append(separator).Append('\n');
+                    var sectionBuilder = new Section.Builder("log-element");
+                    sectionBuilder.AddField("Mode", ((Mode)mode).ToString());
+                    sectionBuilder.AddField("Mode-Raw", $"{mode:x08}");
+                    sectionBuilder.Content.Append(ReplaceMessage(entry.message));
                 }
             }
 
             LogEntries.consoleFlags = backupFlags;
             
-            return builder.ToString(); 
+            return LogFileWriter.WriteToString(fileBuilder.Build()); 
         }
 
-        private void AppendUpm(StringBuilder builder)
+        private void AppendUpm(ConsoleLogFileV1.Builder builder)
         {
             foreach (var (package, type, version) in PackageManagerInfoCollector.UpmLockedPackages())
             {
@@ -147,7 +137,8 @@ namespace Anatawa12.ConsoleLogSaver
 
                     case UpmDependencyType.FileRelative:
                         // It's rarely to have personal info in relative paths.
-                        needsReplace = version.StartsWith("file:../..") || version.StartsWith("file:..\\..");
+                        needsReplace = version.StartsWith("file:../..", StringComparison.Ordinal)
+                                       || version.StartsWith("file:..\\..", StringComparison.Ordinal);
                         break;
                     case UpmDependencyType.FileAbsolute:
                         // It's likely to have personal info in absolute paths so hide it
@@ -157,21 +148,17 @@ namespace Anatawa12.ConsoleLogSaver
                         throw new ArgumentOutOfRangeException();
                 }
 
-                if (needsReplace)
-                    builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(ReplaceMessage(version))
-                        .Append('\n');
-                else
-                    builder.Append("Upm-Dependency: ").Append(package).Append('@').Append(version).Append('\n');
+                builder.AddField("Upm-Dependency", $"{package}@{(needsReplace ? ReplaceMessage(version) : version)}");
             }
         }
 
-        private void AppendVpm(StringBuilder builder)
+        private void AppendVpm(ConsoleLogFileV1.Builder builder)
         {
             foreach (var (package, version) in PackageManagerInfoCollector.VpmLockedPackages())
             {
                 // for vpm dependency, everything including local packages are identified using package id so
                 // it's not likely to include personal info.
-                builder.Append("Vpm-Dependency: ").Append(package).Append('@').Append(version).Append('\n');
+                builder.AddField("Vpm-Dependency", $"{package}@{(version)}");
             }
         }
 

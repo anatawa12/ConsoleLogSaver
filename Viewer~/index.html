@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<style>
+    html, body {
+        margin: 0;
+        background-color: lightgray;
+        font-family: monospace;
+    }
+    .page {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .page-header {
+        height: 55px;
+        border-bottom: black 1px solid;
+        flex-shrink: 0;
+        padding: 0 5px;
+    }
+    .page-header > button {
+        font-size: 15px;
+        padding: 10px 20px;
+        border: none;
+        background-color: #1E90FF;
+        color: white;
+    }
+    [hidden]{
+        display:none !important; /* allow make flexbox hidden */
+    }
+</style>
+
+<style>
+    .page-input-text-area {
+        resize: none;
+        flex-grow: 1;
+        margin: 0;
+        padding: 10px;
+        border: black 1px solid;
+        box-sizing: border-box;
+        white-space: pre;
+    }
+    .page-input > .page-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+</style>
+
+<div class="page page-input">
+    <div class="page-header">
+        <button class="page-input-parse-button">Parse log</button>
+    </div>
+    <textarea class="page-input-text-area" placeholder="Paste log here OR Drag &amp; Drop log file!"></textarea>
+</div>
+
+<style>
+    .page-logs > .page-header {
+        display: flex;
+        align-items: center;
+    }
+    .page-logs-list {
+        display: flex;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .page-logs-element {
+        display: flex;
+        flex-direction: row;
+        line-height: 1.2em;
+        border-bottom: black 1px solid;
+    }
+    .page-logs-element-icon {
+        width: calc(2 * 1.2em);
+        height: calc(2 * 1.2em);
+        padding: 3px;
+    }
+    .page-logs-element-text-short {
+        height: calc(2 * 1.2em);
+        white-space: pre;
+        flex-grow: 1;
+        padding: 3px;
+        overflow: hidden;
+    }
+    .page-logs-body {
+        flex-shrink: 0;
+        height: 30%;
+        min-height: 100px;
+        border-top: black 1px solid;
+        white-space: pre;
+        overflow-x: auto;
+    }
+</style>
+<div class="page page-logs" hidden>
+    <div class="page-header">
+        <button class="page-logs-back-button">Back</button>
+    </div>
+
+    <template id="page-log-template-element">
+        <div class="page-logs-element" onclick="onClickLogElement(this)">
+            <img class="page-logs-element-icon" src="error.svg" alt="icon"/>
+            <div class="page-logs-element-text-short"></div>
+            <div class="page-logs-element-text-full" hidden></div>
+        </div>
+    </template>
+
+    <div class="page-logs-list">
+    </div>
+    <div class="page-logs-body"></div>
+</div>
+
+<script>
+// D&D process
+    (() => {
+        const input = document.querySelector('.page-input-text-area');
+
+        for (const event of ['dragenter', 'dragover', 'dragleave', 'drop'])
+            input.addEventListener(event, e => e.preventDefault(), false);
+
+        input.addEventListener('drop', e => {
+            const file = e.dataTransfer.files[0];
+            const reader = new FileReader();
+
+            reader.onload = () => {
+                input.value = reader.result;
+                document.querySelector('.page-input-parse-button').click();
+            };
+
+            reader.readAsText(file);
+        });
+    })();
+    // button "Parse Log" and "Back"
+    (() => {
+        const pageInput = document.querySelector(".page-input");
+        const pageLogs = document.querySelector(".page-logs");
+
+        /** @type {HTMLTemplateElement} */
+        const template = document.querySelector("#page-log-template-element");
+
+        const logList = document.querySelector(".page-logs-list");
+
+        const input = document.querySelector('.page-input-text-area');
+        document.querySelector(".page-input-parse-button").addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            const children = [];
+            const parsed = parseContent(input.value);
+            for (const section of parsed.sections) {
+                if (section.contentType !== "log-element") continue;
+                // sections
+                // TODO: log type detection
+                const cloned = template.content.cloneNode(true);
+                cloned.querySelector(".page-logs-element-icon").src = "error.svg";
+                const lines = section.content.split(/\r?\n/g);
+                cloned.querySelector(".page-logs-element-text-short").textContent = lines.length === 1 ? lines[0] : `${lines[0]}\n${lines[1]}`;
+                cloned.querySelector(".page-logs-element-text-full").textContent = section.content;
+                children.push(cloned);
+            }
+            logList.replaceChildren(...children);
+
+            pageInput.hidden = true;
+            pageLogs.hidden = false;
+        })
+
+        document.querySelector(".page-logs-back-button").addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            pageInput.hidden = false;
+            pageLogs.hidden = true;
+        })
+    })();
+
+    (() => {
+        const logBody = document.querySelector(".page-logs-body");
+        window.onClickLogElement = (element) => {
+            logBody.textContent = element.querySelector(".page-logs-element-text-full").textContent;
+        };
+    })();
+
+/**
+ * 
+ * @param content {string}
+ * @return {{headerValues: [string, string][], sections: Section[]}}
+ */
+function parseContent(content) {
+    return {
+        headerValues: [],
+        sections: [
+            new Section([["Content", "log-element"]], "127.0.0.1:10101 connected\n" +
+                "UnityEngine.Debug:Log (object)\n" +
+                "VRC.PackageManagement.UnityWindowClient:Log (WatsonTcp.Severity,string) (at Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/CreatorCompanion/UnityWindowClient.cs:211)\n" +
+                "VRC.PackageManagement.UnityWindowClient:Log (string) (at Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/CreatorCompanion/UnityWindowClient.cs:193)\n" +
+                "VRC.PackageManagement.UnityWindowClient:ServerConnected (object,WatsonTcp.ConnectionEventArgs) (at Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/CreatorCompanion/UnityWindowClient.cs:153)\n" +
+                "WatsonTcp.WatsonTcpClientEvents/<>c__DisplayClass30_0:<HandleServerConnected>b__0 ()\n" +
+                "WatsonTcp.WatsonTcpClientEvents:WrappedEventHandler (System.Action,string,object)\n" +
+                "WatsonTcp.WatsonTcpClientEvents:HandleServerConnected (object,WatsonTcp.ConnectionEventArgs)\n" +
+                "WatsonTcp.WatsonTcpClient:Connect ()\n" +
+                "System.Threading._ThreadPoolWaitCallback:PerformWaitCallback ()\n"),
+        ]
+    }
+}
+
+    class Section {
+        /** @type {[string, string][]} */
+        fields;
+        /** @type {string} */
+        content;
+        /**
+         * @param fields {[string, string][]}
+         * @param content {string}
+         */
+        constructor(fields, content) {
+            this.fields = fields;
+            this.content = content;
+        }
+
+        /** @type {string | null} */
+        get contentType() {
+            return this.fields.find(x => x[0].toLowerCase() === "content")?.[1]
+        }
+    }
+</script>

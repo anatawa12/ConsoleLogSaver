@@ -107,6 +107,7 @@ namespace Anatawa12.ConsoleLogSaver
                     sectionBuilder.AddField("Mode", ((Mode)mode).ToString());
                     sectionBuilder.AddField("Mode-Raw", $"{mode:x08}");
                     sectionBuilder.Content.Append(ReplaceMessage(entry.message));
+                    fileBuilder.AddSection(sectionBuilder.Build());
                 }
             }
 

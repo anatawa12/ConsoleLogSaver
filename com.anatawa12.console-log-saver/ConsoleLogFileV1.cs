@@ -158,7 +158,7 @@ namespace Anatawa12.ConsoleLogSaver
         {
             var builder = new StringBuilder();
 
-            var separator = "================" + Guid.NewGuid().ToString("N") + "================\n";
+            var separator = "================" + Guid.NewGuid().ToString("N") + "================";
             builder.AppendFile(separator, file);
 
             return builder.ToString();
@@ -167,12 +167,12 @@ namespace Anatawa12.ConsoleLogSaver
         private static void AppendFile(this StringBuilder builder, string separator, ConsoleLogFileV1 file)
         {
             builder.Append("ConsoleLogSaverData/1.0\n");
-            builder.AppendFields(file.HeaderValues);
-            builder.Append(separator);
+            builder.AppendFields(new[] {("Separator", separator)}.Concat(file.HeaderValues));
+            builder.Append(separator).Append('\n');
             foreach (var section in file.Sections)
             {
                 builder.AppendSection(section);
-                builder.Append(separator);
+                builder.Append(separator).Append('\n');
             }
         }
 

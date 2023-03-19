@@ -13,6 +13,7 @@ How to Use
 3. Open window at `Tools/Console Log Saver`
 4. Click `Save to File` & shere created file \
    OR `Copy to Clipboard` and share using something like [pastebin.com]
+5. (Who can solve error) Read the log file using [web viewer tool][viewer].
 
 使い方
 ---
@@ -21,6 +22,7 @@ How to Use
 3. `Tools/Console Log Saver`を選択してウィンドウを開く
 4. `Save to File`を押して生成されたファイルを共有する\
    または`Copy to Clipboard`して[pastebin.com]などで共有する。
+5. (エラーを解決できる人が) [web viewer tool][viewer] を使用して出力を読む。
 
 File Format
 ---
@@ -91,6 +93,7 @@ header sectionでは以下の必須なフィールドがあります。
 
 [saver-unitypackage-download]: https://github.com/anatawa12/ConsoleLogSaver/releases/latest/download/saver.unitypackage
 [pastebin.com]: https://pastebin.com/
+[viewer]: https://anatawa12.github.io/ConsoleLogSaver/
 [unity-build-target]: https://docs.unity3d.com/2021.2/ScriptReference/EditorUserBuildSettings-activeBuildTarget.html
 [UPM]: https://docs.unity3d.com/Manual/Packages.html
 [VPM]: https://vcc.docs.vrchat.com/vpm/

@@ -37,3 +37,9 @@ msgstr "ログをコピーしました! お友達に送りましょう!"
 
 msgid "dialog:ok:Copied"
 msgstr "OK"
+
+msgid "updateNotice:box-message"
+msgstr "ConsoleLogSaverの新しいバージョンがあります！更新しましょう！"
+
+msgid "updateNotice:go-button"
+msgstr "ダウンロードページを開く"

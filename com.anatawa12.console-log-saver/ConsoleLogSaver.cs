@@ -41,8 +41,9 @@ namespace Anatawa12.ConsoleLogSaver
         private void OnGUI()
         {
             _serializedObject.Update();
-            GUILayout.Label("ConsoleLogSaver");
+            GUILayout.Label($"ConsoleLogSaver v{LatestVersionDetector.CurrentVersion ?? " unknown"}");
             CL4EE.DrawLanguagePicker();
+            LatestVersionDetector.ShowUpdateNoticeIfNeeded(Repaint);
             EditorGUILayout.LabelField(CL4EE.Tr("heading:Security Settings"));
             EditorGUI.BeginDisabledGroup(true);
             EditorGUILayout.Toggle(CL4EE.Tr("prop:Unity Version (required)"), true);

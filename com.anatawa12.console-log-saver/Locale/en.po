@@ -34,3 +34,9 @@ msgstr "Copied log info to clipboard! Send the text to your friends!"
 
 msgid "dialog:ok:Copied"
 msgstr "OK"
+
+msgid "updateNotice:box-message"
+msgstr "Newer version of ConsoleLogSaver found! Please update ConsoleLogSaver"
+
+msgid "updateNotice:go-button"
+msgstr "Open Download Page"

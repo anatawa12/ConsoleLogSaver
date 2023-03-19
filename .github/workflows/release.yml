@@ -34,7 +34,12 @@ jobs:
         id: update-version
         run: |
           set-version "$(version-unsnapshot "$(get-version)")"
-          echo "VERSION=$(get-version)" >> $GITHUB_ENV
+          VERSION="$(get-version)"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          {
+            echo "$VERSION"
+            echo "# second line or later may be used for other reason later"
+          } > latest.txt
 
       - name: Commit & tag version
         if: ${{ inputs.publish }}

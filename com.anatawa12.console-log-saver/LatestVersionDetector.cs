@@ -12,7 +12,7 @@ namespace Anatawa12.ConsoleLogSaver
 {
     static class LatestVersionDetector
     {
-        [CanBeNull] public static readonly string CurrentVersion = "1.0.0";//GetCurrentVersion();
+        [CanBeNull] public static readonly string CurrentVersion = GetCurrentVersion();
         [CanBeNull] private static Task _latestVersionTask;
         private static bool _isOutdated = false;
         private static DateTime _lastCheckDate = DateTime.MinValue;

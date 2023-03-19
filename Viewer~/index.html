@@ -164,6 +164,7 @@
                 children.push(cloned);
             }
             logList.replaceChildren(...children);
+            document.querySelector(".page-logs-body").textContent = '';
 
             pageInput.hidden = true;
             pageLogs.hidden = false;

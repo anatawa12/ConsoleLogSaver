@@ -13,32 +13,30 @@ if (vm == null)
     throw new Exception($"Cannot connect to pid {pid}");
 }
 
+Task<ThreadMirror> WaitForSuspend(VirtualMachine vm)
+{
+    return Task.Run(() =>
+    {
+        while (true)
+        {
+            var eventSet = vm.GetNextEventSet();
+            foreach (var eventSetEvent in eventSet.Events)
+            {
+                if (eventSetEvent.EventType == EventType.Breakpoint)
+                {
+                    return eventSetEvent.Thread;
+                }
+            }
+        }
+    });
+}
+
 vm.SetBreakpoint(vm
     .GetTypes("UnityEditor.EditorApplication", false)
     .SelectMany(x => x.GetMethods())
     .First(x => x.Name == "Internal_CallUpdateFunctions"), 0);
 
-//vm.EnableEvents();
-
-ThreadMirror thread;
-
-while (true)
-{
-    var eventSet = vm.GetNextEventSet();
-    Console.WriteLine($"Got Event Set: {eventSet.SuspendPolicy}");
-    foreach (var eventSetEvent in eventSet.Events)
-        Console.WriteLine($"Got Event: {eventSetEvent} on {eventSetEvent.Thread.ThreadId}");
-    foreach (var eventSetEvent in eventSet.Events)
-    {
-        if (eventSetEvent.EventType == EventType.Breakpoint)
-        {
-            thread = eventSetEvent.Thread;
-            goto after_breakpoint;
-        }
-    }
-}
-
-after_breakpoint:
+var thread = await WaitForSuspend(vm);
 
 Console.WriteLine("Suspended The VM");
 

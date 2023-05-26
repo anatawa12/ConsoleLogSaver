@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Reflection;
+using Anatawa12.ConsoleLogSaver;
 using Mono.Debugger.Soft;
 
 var pid = int.Parse(args[0]);
@@ -52,16 +53,15 @@ var logEntries = new LogEntriesWrapper(logEntriesTypeMirror, thread);
 var flags = logEntries.ConsoleFlags;
 Console.WriteLine($"logEntries.ConsoleFlags: {flags}");
 
+var fileBuilder = new ConsoleLogFileV1.Builder();
+
 try
 {
     logEntries.SetConsoleFlag(ConsoleFlags.Collapse, false);
     logEntries.SetConsoleFlag(ConsoleFlags.LogLevelLog, true);
     logEntries.SetConsoleFlag(ConsoleFlags.LogLevelError, true);
     logEntries.SetConsoleFlag(ConsoleFlags.LogLevelWarning, true);
-    
-    
-    Console.WriteLine($"logEntries.ConsoleFlags after: {logEntries.ConsoleFlags}");
-    Console.WriteLine("================================================================");
+
     using var scope = new GettingLogEntriesScope(logEntries);
 
     var entry = LogEntryWrapper.New(logEntryTypeMirror, thread);
@@ -69,15 +69,11 @@ try
     {
         logEntries.GetEntryInternal(i, entry);
         var mode = entry.Mode;
-        Console.WriteLine($"mode: {mode}");
-        Console.WriteLine();
-        Console.WriteLine(entry.Message);
-        Console.WriteLine("================================================================");
-        //var sectionBuilder = new Section.Builder("log-element");
-        //sectionBuilder.AddField("Mode", ((Mode)mode).ToString());
-        //sectionBuilder.AddField("Mode-Raw", $"{mode:x08}");
-        //sectionBuilder.Content.Append(ReplaceMessage(entry.message));
-        //fileBuilder.AddSection(sectionBuilder.Build());
+        var sectionBuilder = new Section.Builder("log-element");
+        sectionBuilder.AddField("Mode", mode.ToString());
+        sectionBuilder.AddField("Mode-Raw", $"{(int)mode:x08}");
+        sectionBuilder.Content.Append(ReplaceMessage(entry.Message));
+        fileBuilder.AddSection(sectionBuilder.Build());
     }
 }
 finally
@@ -86,8 +82,11 @@ finally
 }
 
 vm.Resume();
-Console.WriteLine("Resumed The VM");
 vm.Detach();
+
+Console.WriteLine(LogFileWriter.WriteToString(fileBuilder.Build())); 
+
+string ReplaceMessage(string str) => str;
 
 internal struct GettingLogEntriesScope : IDisposable
 {

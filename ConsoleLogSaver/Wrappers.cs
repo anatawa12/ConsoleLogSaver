@@ -78,7 +78,7 @@ abstract class StaticWrapperBase : WrapperBase<TypeMirror>
     {
     }
     
-    protected StaticWrapperBase(ThreadMirror thread, string assembly, string type)
+    protected StaticWrapperBase(ThreadMirror thread, string? assembly, string type)
         : this(thread.VirtualMachine.FindType(assembly, type), thread)
     {
     }
@@ -156,6 +156,20 @@ class EditorUserBuildSettingsWrapper : StaticWrapperBase
     private PropertyInfoMirror? _unityVersion;
 
     public BuildTarget ActiveBuildTarget => (BuildTarget)GetProperty("activeBuildTarget", ref _unityVersion).AsInt32Enum();
+}
+
+class DirectoryWrapper : StaticWrapperBase
+{
+    public DirectoryWrapper(ThreadMirror thread) : base(thread, null, "System.IO.Directory")
+    {
+    }
+
+    private MethodMirror? _getCurrentDirectory;
+
+    public string GetCurrentDirectory() => CallMethod("GetCurrentDirectory",
+        Array.Empty<string>(),
+        Array.Empty<Value>(),
+        ref _getCurrentDirectory).AsString();
 }
 
 class LogEntryWrapper : ObjectWrapperBase

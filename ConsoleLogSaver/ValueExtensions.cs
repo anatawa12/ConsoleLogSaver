@@ -26,7 +26,7 @@ static class ValueExtensions
         });
     }
 
-    public static TypeMirror FindType(this VirtualMachine vm, string assembly, string type) =>
+    public static TypeMirror FindType(this VirtualMachine vm, string? assembly, string type) =>
         vm.GetTypes(type, false)
-            .First(x => x.Assembly.GetName().Name == assembly);
+            .First(x => assembly == null || x.Assembly.GetName().Name == assembly);
 }

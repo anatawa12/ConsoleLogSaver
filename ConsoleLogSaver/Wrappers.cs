@@ -65,16 +65,38 @@ abstract class ObjectWrapperBase : WrapperBase<ObjectMirror>
     {
         if (field != null) return field;
         return field = Type.GetField(name)
-                          ?? throw new InvalidOperationException($"Field {name} not found");
+                       ?? throw new InvalidOperationException($"Field {name} not found");
     }
 
     protected Value GetField(string name, ref FieldInfoMirror? field) =>
         This.GetValue(Field(name, ref field));
 }
 
-class LogEntriesWrapper : WrapperBase<TypeMirror>
+abstract class StaticWrapperBase : WrapperBase<TypeMirror>
 {
-    public LogEntriesWrapper(TypeMirror type, ThreadMirror thread) : base(type, type, thread)
+    protected StaticWrapperBase(TypeMirror type, ThreadMirror thread) : base(type, type, thread)
+    {
+    }
+    
+    protected StaticWrapperBase(ThreadMirror thread, string assembly, string type)
+        : this(thread.VirtualMachine.FindType(assembly, type), thread)
+    {
+    }
+
+    private FieldInfoMirror Field(string name, ref FieldInfoMirror? field)
+    {
+        if (field != null) return field;
+        return field = Type.GetField(name)
+                       ?? throw new InvalidOperationException($"Field {name} not found");
+    }
+
+    protected Value GetField(string name, ref FieldInfoMirror? field) =>
+        This.GetValue(Field(name, ref field));
+}
+
+class LogEntriesWrapper : StaticWrapperBase
+{
+    public LogEntriesWrapper(ThreadMirror thread) : base(thread, "UnityEditor", "UnityEditor.LogEntries")
     {
     }
 
@@ -114,6 +136,28 @@ class LogEntriesWrapper : WrapperBase<TypeMirror>
         ref _getEntryInternal);
 }
 
+class ApplicationWrapper : StaticWrapperBase
+{
+    public ApplicationWrapper(ThreadMirror thread) : base(thread, "UnityEngine.CoreModule", "UnityEngine.Application")
+    {
+    }
+
+    private PropertyInfoMirror? _unityVersion;
+
+    public string UnityVersion => GetProperty("unityVersion", ref _unityVersion).AsString();
+}
+
+class EditorUserBuildSettingsWrapper : StaticWrapperBase
+{
+    public EditorUserBuildSettingsWrapper(ThreadMirror thread) : base(thread, "UnityEditor", "UnityEditor.EditorUserBuildSettings")
+    {
+    }
+
+    private PropertyInfoMirror? _unityVersion;
+
+    public BuildTarget ActiveBuildTarget => (BuildTarget)GetProperty("activeBuildTarget", ref _unityVersion).AsInt32Enum();
+}
+
 class LogEntryWrapper : ObjectWrapperBase
 {
     public LogEntryWrapper(TypeMirror type, ObjectMirror value, ThreadMirror thread) : base(type, value, thread)
@@ -126,8 +170,9 @@ class LogEntryWrapper : ObjectWrapperBase
     public Mode Mode => (Mode)GetField("mode", ref _mode).AsInt32();
     public string Message => GetField("message", ref _messsage).AsString();
 
-    public static LogEntryWrapper New(TypeMirror logEntryType, ThreadMirror thread)
+    public static LogEntryWrapper New(ThreadMirror thread)
     {
+        var logEntryType = thread.VirtualMachine.FindType("UnityEditor", "UnityEditor.LogEntry");
         var ctor = logEntryType.GetMethodsByNameFlags(".ctor",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                 false)

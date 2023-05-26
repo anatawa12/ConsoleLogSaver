@@ -50,7 +50,8 @@ Console.WriteLine(LogFileWriter.WriteToString(await saver.CollectFromPid(pid)));
 
 void PrintHelp(int exitCode)
 {
-    Console.Error.WriteLine("ConsoleLogSaver [OPTIONS] <unity pid>");
+    var process = Environment.GetCommandLineArgs()[0];
+    Console.Error.WriteLine($"{process} [OPTIONS] <unity pid>");
     Console.Error.WriteLine("Experimental ConsoleLogSaver with mono debug protocol");
     Console.Error.WriteLine("");
     Console.Error.WriteLine("OPTIONS:");

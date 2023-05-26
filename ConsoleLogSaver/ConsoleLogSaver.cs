@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -39,6 +40,9 @@ public class ConsoleLogSaver
             return _namePatternRegex = new Regex(Regex.Escape(Environment.UserName), RegexOptions.IgnoreCase);
         }
     }
+
+    public static int[] FindUnityProcess() =>
+        Process.GetProcessesByName("Unity").Select(x => x.Id).ToArray();
 
     internal async Task<ConsoleLogFileV1> CollectFromPid(int pid)
     {

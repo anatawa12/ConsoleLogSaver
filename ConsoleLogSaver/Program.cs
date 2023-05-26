@@ -1,8 +1,5 @@
 ﻿using Anatawa12.ConsoleLogSaver;
 
-if (args.Length == 0)
-    PrintHelp(1);
-
 int? pidIn = null;
 var saver = new ConsoleLogSaver();
 
@@ -39,7 +36,15 @@ foreach (var s in args)
 }
 
 if (pidIn is not { } pid)
-    throw new Exception("NO PID PROVIDED");
+{
+    var process = ConsoleLogSaver.FindUnityProcess();
+    if (process.Length == 0)
+        throw new Exception("No UnityEditors found");
+    if (process.Length != 1)
+        Console.Error.WriteLine($"WARNING: Multiple Unity Editors found. using {process[0]}");
+
+    pid = process[0];
+}
 
 Console.WriteLine(LogFileWriter.WriteToString(await saver.CollectFromPid(pid)));
 

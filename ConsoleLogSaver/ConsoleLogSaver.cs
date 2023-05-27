@@ -41,26 +41,10 @@ public class ConsoleLogSaver
         }
     }
 
-    public static int[] FindUnityProcess() =>
-        Process.GetProcessesByName("Unity").Select(x => x.Id).ToArray();
-
-    internal async Task<ConsoleLogFileV1> CollectFromPid(int pid)
+    internal async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
     {
-        var vm = VirtualMachineManager.Connect(new IPEndPoint(
-            new IPAddress(stackalloc byte[] { 127, 0, 0, 1 }),
-            56000 + pid % 1000));
-
-        if (vm == null)
-        {
-            throw new Exception($"Cannot connect to pid {pid}");
-        }
-
-        vm.SetBreakpoint(vm
-            .GetTypes("UnityEditor.EditorApplication", false)
-            .SelectMany(x => x.GetMethods())
-            .First(x => x.Name == "Internal_CallUpdateFunctions"), 0);
-
-        var thread = await vm.WaitForBreakPoint();
+        var scope = await session.WaitAndRunInMainThread();
+        var thread = scope.Thread;
 
         var fileBuilder = new ConsoleLogFileV1.Builder();
 
@@ -76,9 +60,6 @@ public class ConsoleLogSaver
         AppendUpm(fileBuilder, projectRoot);
         AppendVpm(fileBuilder, projectRoot);
         AppendLog(thread, fileBuilder);
-
-        vm.Resume();
-        vm.Detach();
 
         return fileBuilder.Build();
     }

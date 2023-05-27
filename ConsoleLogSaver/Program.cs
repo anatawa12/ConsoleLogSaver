@@ -25,6 +25,9 @@ foreach (var s in args)
         case "--show-os-info":
             saver.HideOsInfo = false;
             break;
+        case "--list":
+            await FindProcesses();
+            break;
         case "--help":
         case "-h":
             PrintHelp(0);
@@ -35,18 +38,38 @@ foreach (var s in args)
     }
 }
 
-if (pidIn is not { } pid)
-{
-    var process = ConsoleLogSaver.FindUnityProcess();
-    if (process.Length == 0)
-        throw new Exception("No UnityEditors found");
-    if (process.Length != 1)
-        Console.Error.WriteLine($"WARNING: Multiple Unity Editors found. using {process[0]}");
+DebuggerSession session;
 
-    pid = process[0];
+if (pidIn is { } pid)
+{
+    session = await DebuggerSession.Connect(pid);
+}
+else
+{
+    var process = await DebuggerSession.ConnectAllUnityProcesses(TimeSpan.FromSeconds(1));
+    try
+    {
+        if (process.Length == 0)
+            throw new Exception("No UnityEditors found");
+        if (process.Length != 1)
+            Console.Error.WriteLine(
+                $"WARNING: Multiple Unity Editors found. using {process[0].Pid} for {process[1].ProjectRoot}");
+
+        session = process[0];
+    }
+    catch
+    {
+        if (process.Length != 0)
+            process[0].Dispose();
+        throw;
+    }
+    finally
+    {
+        foreach (var debuggerSession in process.Skip(1)) debuggerSession.Dispose();
+    }
 }
 
-Console.WriteLine(LogFileWriter.WriteToString(await saver.CollectFromPid(pid)));
+Console.WriteLine(LogFileWriter.WriteToString(await saver.Collect(session)));
 
 void PrintHelp(int exitCode)
 {
@@ -62,4 +85,12 @@ void PrintHelp(int exitCode)
     Console.Error.WriteLine("\t--hide-os-info: enable Hide OS Info flag");
     Console.Error.WriteLine("\t--show-os-info: disable Hide OS Info flag");
     Environment.Exit(exitCode);
+}
+
+async Task FindProcesses()
+{
+    var sessions = await DebuggerSession.ConnectAllUnityProcesses(TimeSpan.FromSeconds(1));
+    foreach (var debuggerSession in sessions)
+        Console.Error.WriteLine($"{debuggerSession.Pid} for {debuggerSession.ProjectRoot}");
+    Environment.Exit(0);
 }

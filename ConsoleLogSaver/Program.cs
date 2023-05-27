@@ -84,6 +84,8 @@ void PrintHelp(int exitCode)
     Console.Error.WriteLine("\t--show-user-home: disable Hide User Home log filter");
     Console.Error.WriteLine("\t--hide-os-info: enable Hide OS Info flag");
     Console.Error.WriteLine("\t--show-os-info: disable Hide OS Info flag");
+    Console.Error.WriteLine("\t--list: list unity processes and exit");
+    Console.Error.WriteLine("\t--help: show this message and exit");
     Environment.Exit(exitCode);
 }
 

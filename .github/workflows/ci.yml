@@ -1,6 +1,8 @@
 on:
   push:
     branches: [ master, reimplement-with-debugger-protocol ]
+  pull_request:
+    branches: [ master, reimplement-with-debugger-protocol ]
 
 jobs:
   build:

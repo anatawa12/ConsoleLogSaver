@@ -20,7 +20,7 @@
         <value>ファイルに保存する</value>
     </data>
     <data name="CopyToClipboard" xml:space="preserve">
-        <value>コピーする</value>
+        <value>クリップボードにコピーする</value>
     </data>
     <data name="UpdateRunningUnityList" xml:space="preserve">
         <value>実行中のUnity一覧を更新</value>

@@ -41,7 +41,7 @@ public class ConsoleLogSaver
         }
     }
 
-    internal async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
+    public async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
     {
         var scope = await session.WaitAndRunInMainThread();
         var thread = scope.Thread;

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Anatawa12.ConsoleLogSaver
 {
-    class ConsoleLogFileV1
+    public class ConsoleLogFileV1
     {
         public IReadOnlyList<(string name, string value)> HeaderValues { get; }
         public IReadOnlyList<Section> Sections { get; }
@@ -50,7 +50,7 @@ namespace Anatawa12.ConsoleLogSaver
         }
     }
 
-    class Section
+    public class Section
     {
         public IReadOnlyList<(string name, string value)> Fields { get; }
         public string Content { get; }
@@ -152,7 +152,7 @@ namespace Anatawa12.ConsoleLogSaver
         }
     }
 
-    static class LogFileWriter
+    public static class LogFileWriter
     {
         public static string WriteToString(ConsoleLogFileV1 file)
         {

@@ -1,4 +1,5 @@
 ﻿using Anatawa12.ConsoleLogSaver;
+using ConsoleLogSaver.Gui;
 using Mono.Debugger.Soft;
 
 sealed class MainWindow : Form
@@ -35,11 +36,11 @@ sealed class MainWindow : Form
         });
         UnityInstances.SelectedIndexChanged += (_, _) => SetButtonEnabled();
 
-        AddButton("Update Running Unity List", (_, _) => ReloadUnity());
+        AddButton(Localization.UpdateRunningUnityList, (_, _) => ReloadUnity());
 
-        AddControl(new Label { Text = "Security Settings" }, 15);
+        AddControl(new Label { Text = Localization.SecuritySettings }, 15);
 
-        AddControl(new CheckBox { Text = "Unity Version", Checked = true, Enabled = false }, 15);
+        AddControl(new CheckBox { Text = Localization.UnityVersion, Checked = true, Enabled = false }, 15);
 
         void FieldCheckBox(string text, bool @checked, Action<bool> setter)
         {
@@ -47,14 +48,14 @@ sealed class MainWindow : Form
             box.CheckedChanged += (_, _) => setter(box.Checked);
         }
 
-        FieldCheckBox("Hide OS Info", _saver.HideOsInfo, v => _saver.HideOsInfo = v);
-        FieldCheckBox("Hide User Name", _saver.HideUserName, v => _saver.HideUserName = v);
-        FieldCheckBox("Hide User Home", _saver.HideUserHome, v => _saver.HideUserHome = v);
+        FieldCheckBox(Localization.HideOSInfo, _saver.HideOsInfo, v => _saver.HideOsInfo = v);
+        FieldCheckBox(Localization.HideUserName, _saver.HideUserName, v => _saver.HideUserName = v);
+        FieldCheckBox(Localization.HideUserHome, _saver.HideUserHome, v => _saver.HideUserHome = v);
 
         SelectionRequiredButtons = new[]
         {
-            AddButton("Save to File", SaveToFile, false),
-            AddButton("Copy to Clipboard", CopyToClipboard, false),
+            AddButton(Localization.SaveToFile, SaveToFile, false),
+            AddButton(Localization.CopyToClipboard, CopyToClipboard, false),
         };
 
         ReloadUnity();

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<root>
+    <data name="UpdateRunningUnityList">
+        <value>Update Running Unity List</value>
+    </data>
+    <data name="SecuritySettings">
+        <value>Security Settings</value>
+    </data>
+    <data name="UnityVersion">
+        <value>Unity Version (required)</value>
+    </data>
+    <data name="HideOSInfo">
+        <value>Hide OS Info</value>
+    </data>
+    <data name="HideUserName">
+        <value>Hide User Name</value>
+    </data>
+    <data name="HideUserHome">
+        <value>Hide User Home</value>
+    </data>
+    <data name="SaveToFile">
+        <value>Save to File</value>
+    </data>
+    <data name="CopyToClipboard">
+        <value>Copy to Clipboard</value>
+    </data>
+</root>

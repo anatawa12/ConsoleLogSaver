@@ -1,5 +1,5 @@
 ﻿using Anatawa12.ConsoleLogSaver;
-using ConsoleLogSaver.Gui;
+using Anatawa12.ConsoleLogSaver.Gui;
 using Mono.Debugger.Soft;
 
 sealed class MainWindow : Form

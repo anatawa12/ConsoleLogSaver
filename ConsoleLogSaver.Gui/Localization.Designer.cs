@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ConsoleLogSaver.Gui {
+namespace Anatawa12.ConsoleLogSaver.Gui {
     using System;
     
     

@@ -43,7 +43,7 @@ public class ConsoleLogSaver
 
     public async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
     {
-        var scope = await session.WaitAndRunInMainThread();
+        using var scope = await session.WaitAndRunInMainThread();
         var thread = scope.Thread;
 
         var fileBuilder = new ConsoleLogFileV1.Builder();

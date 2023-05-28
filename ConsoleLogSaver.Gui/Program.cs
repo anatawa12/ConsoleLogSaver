@@ -35,7 +35,7 @@ sealed class MainWindow : Form
         });
         UnityInstances.SelectedIndexChanged += (_, _) => SetButtonEnabled();
 
-        AddButton("Reload Unity List", (_, _) => ReloadUnity());
+        AddButton("Update Running Unity List", (_, _) => ReloadUnity());
 
         AddControl(new Label { Text = "Security Settings" }, 15);
 

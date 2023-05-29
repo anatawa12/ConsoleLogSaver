@@ -21,19 +21,16 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+      - name: Setup .NET Core SDK 6.0.x
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.x
       - uses: anatawa12/something-releaser@v2
       - uses: snow-actions/git-config-user@v1.0.0
-      - name: Check version is Snapshot
-        run: |
-          if ! [[ "$(get-version)" = *-SNAPSHOT ]]; then
-            echo 'VERSION IS NOT SNAPSHOT' >&2
-            exit 1
-          fi
 
       - name: Update Version Name
         id: update-version
         run: |
-          set-version "$(version-unsnapshot "$(get-version)")"
           VERSION="$(get-version)"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           {
@@ -47,20 +44,11 @@ jobs:
           git commit -am "$VERSION"
           git tag "v$VERSION"
 
-      - name: Prepare build folder
-        run: mkdir build
-
-      - name: Create unitypackage
-        uses: anatawa12/sh-actions/create-unitypackage@master
-        with:
-          output-path: build/saver.unitypackage
-          package-path: com.anatawa12.console-log-saver
-          path-prefix: Assets/com.anatawa12.console-log-saver
-      - name: Upload unitypackage
+      - run: ./build.sh
+      - name: Upload bin
         uses: actions/upload-artifact@v3
         with:
-          name: unitypackage
-          path: build/saver.unitypackage
+          path: bin
 
       - name: Publish Release
         if: ${{ inputs.publish }}
@@ -76,12 +64,12 @@ jobs:
           sleep 1
           # upload release assets
           gh release create "v$VERSION" \
-            "build/saver.unitypackage" \
+            bin/* \
 
       - name: prepare next release & push
         if: ${{ inputs.publish }}
         run: |
           VERSION="$(version-next "$(get-version)")"
-          set-version "$(version-snapshot "$VERSION")"
+          set-version "$VERSION"
           git commit -am "prepare for next version: $VERSION"
           git push && git push --tags

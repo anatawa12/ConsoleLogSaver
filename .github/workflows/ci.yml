@@ -11,6 +11,8 @@ jobs:
       - uses: msys2/setup-msys2@v2
         with:
           install: zip
+          path-type: inherit
+          release: false
       - uses: actions/checkout@v3
         with:
           submodules: recursive

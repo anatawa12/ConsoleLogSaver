@@ -1,8 +1,9 @@
 {
   "releaseChanger": [
     {
-      "changer": "gradle-properties",
-      "path": "com.anatawa12.console-log-saver/version.txt"
+      "changer": "regex-pattern",
+      "path": "ConsoleLogSaver/ConsoleLogSaver.csproj",
+      "info": "<AssemblyVersion>$1</AssemblyVersion>"
     }
   ]
 }

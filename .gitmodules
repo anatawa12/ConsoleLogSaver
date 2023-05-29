@@ -1,6 +1,3 @@
-[submodule "SimpleJson~"]
-	path = SimpleJson~
-	url = https://github.com/anatawa12/SimpleJson.git
-[submodule "CustomLocalization4EditorExtension~"]
-	path = CustomLocalization4EditorExtension~
-	url = https://github.com/anatawa12/CustomLocalization4EditorExtension
+[submodule "deps/debugger-libs"]
+	path = deps/debugger-libs
+	url = https://github.com/mono/debugger-libs

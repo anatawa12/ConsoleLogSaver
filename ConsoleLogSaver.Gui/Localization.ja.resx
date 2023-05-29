@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<root>
+    <data name="SecuritySettings" xml:space="preserve">
+        <value>セキュリティ設定</value>
+    </data>
+    <data name="UnityVersion" xml:space="preserve">
+        <value>Unity Version (必須)</value>
+    </data>
+    <data name="HideOSInfo" xml:space="preserve">
+        <value>OSの情報を隠す</value>
+    </data>
+    <data name="HideUserName" xml:space="preserve">
+        <value>ユーザ名を隠す</value>
+    </data>
+    <data name="HideUserHome" xml:space="preserve">
+        <value>ホームフォルダを隠す</value>
+    </data>
+    <data name="SaveToFile" xml:space="preserve">
+        <value>ファイルに保存する</value>
+    </data>
+    <data name="CopyToClipboard" xml:space="preserve">
+        <value>クリップボードにコピーする</value>
+    </data>
+    <data name="UpdateRunningUnityList" xml:space="preserve">
+        <value>実行中のUnity一覧を更新</value>
+    </data>
+    <data name="VersionAndCheckingForUpdates" xml:space="preserve">
+        <value>Version {0}. 更新を確認中...</value>
+    </data>
+    <data name="VersionAndLatest" xml:space="preserve">
+        <value>Version {0}. 最新版です.</value>
+    </data>
+    <data name="VersionAndFailed" xml:space="preserve">
+        <value>Version {0}. 最新版の取得に失敗しました.</value>
+    </data>
+    <data name="VersionAndNewFound" xml:space="preserve">
+        <value>Version {0}. 新しいバージョン{1}が見つかりました. $ここ$をクリックしてダウンロードしてください.</value>
+    </data>
+</root>

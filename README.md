@@ -8,21 +8,25 @@ The tool to share Unity console log with friend who is good to error resolving.
 How to Use
 ---
 
-1. Download latest unitypackage from [here][saver-unitypackage-download]
-2. import to your Unity project
-3. Open window at `Tools/Console Log Saver`
-4. Click `Save to File` & shere created file \
-   OR `Copy to Clipboard` and share using something like [pastebin.com]
-5. (Who can solve error) Read the log file using [web viewer tool][viewer].
+1. Download latest zip from [here][saver-zip-download]
+2. Extract the zip file
+3. Double-click `ConsoleLogSaver.Gui.exe`
+4. Select your Unity Project from the list.
+5. Click `Save to File` & shere created file \
+   OR `Copy to Clipboard` and share using something like [pastebin.com]. \
+   If you can talk on discord, you can share by just pasting to the discord.
+6. (Who can solve error) Read the log file using [web viewer tool][viewer].
 
 使い方
 ---
-1. 最新版のunitypackageを[ここ][saver-unitypackage-download]からダウンロードする
-2. Unityプロジェクトにimportする
-3. `Tools/Console Log Saver`を選択してウィンドウを開く
-4. `Save to File`を押して生成されたファイルを共有する\
-   または`Copy to Clipboard`して[pastebin.com]などで共有する。
-5. (エラーを解決できる人が) [web viewer tool][viewer] を使用して出力を読む。
+1. 最新版のzipを[ここ][saver-zip-download]からダウンロードする
+2. zipファイルを展開する
+3. `ConsoleLogSaver.Gui.exe`をダブルクリックする
+4. Unity Projectをリストから選択する
+5. `Save to File`を押して生成されたファイルを共有する\
+   または`Copy to Clipboard`して[pastebin.com]などで共有する。\
+   discordを使える場合には、discordにペーストするだけで共有できます。
+6. (エラーを解決できる人が) [web viewer tool][viewer] を使用して出力を読む。
 
 File Format
 ---
@@ -91,7 +95,7 @@ header sectionでは以下の必須なフィールドがあります。
 - `Mode: ` そのログの要素のメタデータ。1になっているビットの名前の羅列
 - `Mode-Raw: ` そのログの要素のメタデータの16進数表記
 
-[saver-unitypackage-download]: https://github.com/anatawa12/ConsoleLogSaver/releases/latest/download/saver.unitypackage
+[saver-zip-download]: https://github.com/anatawa12/ConsoleLogSaver/releases/latest/download/ConsoleLogSaver.Gui-win-x64.zip
 [pastebin.com]: https://pastebin.com/
 [viewer]: https://anatawa12.github.io/ConsoleLogSaver/
 [unity-build-target]: https://docs.unity3d.com/2021.2/ScriptReference/EditorUserBuildSettings-activeBuildTarget.html

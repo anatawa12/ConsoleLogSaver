@@ -1,4 +1,5 @@
-﻿using Anatawa12.ConsoleLogSaver;
+﻿using System.Diagnostics;
+using Anatawa12.ConsoleLogSaver;
 using Anatawa12.ConsoleLogSaver.Gui;
 using Mono.Debugger.Soft;
 
@@ -91,7 +92,12 @@ sealed class MainWindow : Form
                 VersionLabel.Text = parts[0] + parts[1] + parts[2];
                 VersionLabel.LinkArea = new LinkArea(parts[0].Length, parts[1].Length);
                 VersionLabel.LinkClicked += (_, _) =>
-                    System.Diagnostics.Process.Start("https://github.com/anatawa12/ConsoleLogSaver");
+                {
+                    Process.Start(new ProcessStartInfo("https://github.com/anatawa12/ConsoleLogSaver")
+                    {
+                        UseShellExecute = true
+                    });
+                };
             }
             else
             {

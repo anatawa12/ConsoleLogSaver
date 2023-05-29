@@ -24,7 +24,7 @@ foreach (var fileName in args)
             Console.Error.WriteLine($"already gui: {fileName}");
             break;
         case windowsCuiSubsystem:
-            accessor.WriteInt16LittleEndian(offset, windowsGuiSubsystem);
+            accessor.WriteInt16LittleEndian(offset + offsetOfSubsystem, windowsGuiSubsystem);
             Console.Error.WriteLine($"fixed subsystem: {fileName}");
             break;
         default:

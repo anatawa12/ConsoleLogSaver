@@ -7,6 +7,8 @@ sealed class MainWindow : Form
     private ConsoleLogSaver _saver = new();
     public ListView UnityInstances { get; }
 
+    public LinkLabel VersionLabel { get; set; }
+
     // ReSharper disable once MemberInitializerValueIgnored
     public Button[] SelectionRequiredButtons { get; } = Array.Empty<Button>();
 
@@ -38,7 +40,11 @@ sealed class MainWindow : Form
 
         AddButton(Localization.UpdateRunningUnityList, (_, _) => ReloadUnity());
 
-        AddControl(new Label { Text = string.Format(Localization.VersionAndCheckingForUpdates, ConsoleLogSaver.Version) }, 15);
+        VersionLabel = AddControl(15, new LinkLabel
+        {
+            Text = string.Format(Localization.VersionAndCheckingForUpdates, CheckForUpdate.CurrentVersion),
+            LinkArea = new LinkArea(0, 0),
+        });
 
         AddControl(new Label { Text = Localization.SecuritySettings }, 15);
 
@@ -61,6 +67,7 @@ sealed class MainWindow : Form
         };
 
         ReloadUnity();
+        StartCheckForUpdates();
     }
 
     private void SetButtonEnabled()
@@ -69,6 +76,32 @@ sealed class MainWindow : Form
 
         foreach (var button in SelectionRequiredButtons)
             button.Enabled = enabled;
+    }
+
+    private async void StartCheckForUpdates()
+    {
+        var newVersion = await CheckForUpdate.Check();
+        if (newVersion is {} tuple)
+        {
+            var (isOutdated, version) = tuple;
+            if (isOutdated)
+            {
+                var format = string.Format(Localization.VersionAndNewFound, CheckForUpdate.CurrentVersion, version);
+                var parts = format.Split('$', 3);
+                VersionLabel.Text = parts[0] + parts[1] + parts[2];
+                VersionLabel.LinkArea = new LinkArea(parts[0].Length, parts[1].Length);
+                VersionLabel.LinkClicked += (_, _) =>
+                    System.Diagnostics.Process.Start("https://github.com/anatawa12/ConsoleLogSaver");
+            }
+            else
+            {
+                VersionLabel.Text = string.Format(Localization.VersionAndLatest, CheckForUpdate.CurrentVersion);
+            }
+        }
+        else
+        {
+            VersionLabel.Text = string.Format(Localization.VersionAndFailed, CheckForUpdate.CurrentVersion);
+        }
     }
 
     private int _yPosition = 10;

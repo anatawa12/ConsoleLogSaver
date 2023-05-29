@@ -98,5 +98,23 @@ namespace Anatawa12.ConsoleLogSaver.Gui {
                 return ResourceManager.GetString("VersionAndCheckingForUpdates", resourceCulture);
             }
         }
+        
+        internal static string VersionAndLatest {
+            get {
+                return ResourceManager.GetString("VersionAndLatest", resourceCulture);
+            }
+        }
+        
+        internal static string VersionAndFailed {
+            get {
+                return ResourceManager.GetString("VersionAndFailed", resourceCulture);
+            }
+        }
+        
+        internal static string VersionAndNewFound {
+            get {
+                return ResourceManager.GetString("VersionAndNewFound", resourceCulture);
+            }
+        }
     }
 }

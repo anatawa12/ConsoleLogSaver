@@ -28,4 +28,13 @@
     <data name="VersionAndCheckingForUpdates" xml:space="preserve">
         <value>Version {0}. 更新を確認中...</value>
     </data>
+    <data name="VersionAndLatest" xml:space="preserve">
+        <value>Version {0}. 最新版です.</value>
+    </data>
+    <data name="VersionAndFailed" xml:space="preserve">
+        <value>Version {0}. 最新版の取得に失敗しました.</value>
+    </data>
+    <data name="VersionAndNewFound" xml:space="preserve">
+        <value>Version {0}. 新しいバージョン{1}が見つかりました. $ここ$をクリックしてダウンロードしてください.</value>
+    </data>
 </root>

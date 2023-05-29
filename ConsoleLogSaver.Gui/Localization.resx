@@ -28,4 +28,13 @@
     <data name="VersionAndCheckingForUpdates" xml:space="preserve">
         <value>Version {0}. Checking for updates...</value>
     </data>
+    <data name="VersionAndLatest" xml:space="preserve">
+        <value>Version {0}. It's Latest.</value>
+    </data>
+    <data name="VersionAndFailed" xml:space="preserve">
+        <value>Version {0}. Failed to fetch latest version.</value>
+    </data>
+    <data name="VersionAndNewFound" xml:space="preserve">
+        <value>Version {0}. Found new version {1}. Click $here$ for download!</value>
+    </data>
 </root>

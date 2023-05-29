@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleLogSaver", "ConsoleLogSaver\ConsoleLogSaver.csproj", "{5DDC3D59-E04C-4B13-8E79-5C1E9FC1736E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mono.Debugger.Soft", "deps\debugger-libs\Mono.Debugger.Soft\Mono.Debugger.Soft.csproj", "{372E8E3E-29D5-4B4D-88A2-4711CD628C4E}"
@@ -7,6 +8,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleLogSaver.Gui", "ConsoleLogSaver.Gui\ConsoleLogSaver.Gui.csproj", "{9EB2CDE5-E5A6-4D45-B795-21B3CF1E366B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleLogSaver.Cli", "ConsoleLogSaver.Cli\ConsoleLogSaver.Cli.csproj", "{72F921A4-5CDE-46AA-849A-313403DD8209}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PEFlagSetter", "PEFlagSetter\PEFlagSetter.csproj", "{CBA8B1D6-FF73-4697-A346-DFB802ACC5F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,5 +33,9 @@ Global
 		{72F921A4-5CDE-46AA-849A-313403DD8209}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72F921A4-5CDE-46AA-849A-313403DD8209}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72F921A4-5CDE-46AA-849A-313403DD8209}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBA8B1D6-FF73-4697-A346-DFB802ACC5F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBA8B1D6-FF73-4697-A346-DFB802ACC5F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBA8B1D6-FF73-4697-A346-DFB802ACC5F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBA8B1D6-FF73-4697-A346-DFB802ACC5F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

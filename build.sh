@@ -22,17 +22,18 @@ build_cli() {
 }
 
 build_gui() {
-  dotnet publish ./ConsoleLogSaver.Gui/ConsoleLogSaver.Gui.csproj -c:Release
-  # shellcheck disable=SC2043
-  for target in win-x64; do
-    PUBLISH="./ConsoleLogSaver.Gui/bin/Release/net6.0-windows/$target/publish"
-    rm -rf "${PUBLISH:?}/bin" "${PUBLISH:?}/ConsoleLogSaver.Gui.zip"
-    mkdir -p "$PUBLISH/bin"
-    mv "$PUBLISH"/*.exe "$PUBLISH"/*.dll "$PUBLISH/bin"
-    ( cd "$PUBLISH/bin" && zip -r ../ConsoleLogSaver.Gui.zip ./*.dll ./*.exe)
+  target=win-x64
+  PUBLISH="./ConsoleLogSaver.Gui/bin/Release/net6.0-windows/$target/publish"
+  rm -rf "${PUBLISH:?}/bin" "${PUBLISH:?}/ConsoleLogSaver.Gui.zip"
 
-    cp "$PUBLISH/ConsoleLogSaver.Gui.zip" "bin/ConsoleLogSaver.Gui-$target.zip"
-  done
+  dotnet publish ./ConsoleLogSaver.Gui/ConsoleLogSaver.Gui.csproj -c:Release
+  dotnet run --project PEFlagSetter "$PUBLISH/ConsoleLogSaver.Gui.exe"
+
+  mkdir -p "$PUBLISH/bin"
+  mv "$PUBLISH"/*.exe "$PUBLISH"/*.dll "$PUBLISH/bin"
+  ( cd "$PUBLISH/bin" && zip -r ../ConsoleLogSaver.Gui.zip ./*.dll ./*.exe)
+
+  cp "$PUBLISH/ConsoleLogSaver.Gui.zip" "bin/ConsoleLogSaver.Gui-$target.zip"
 }
 
 build_cli

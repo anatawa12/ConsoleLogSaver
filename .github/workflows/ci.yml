@@ -8,9 +8,6 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: msys2/setup-msys2@v2
-        with:
-          install: zip
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -25,7 +22,7 @@ jobs:
 
       # finally run build script for release
       - run: ./build.sh
-        shell: msys2 {0}
+        shell: bash
       - uses: actions/upload-artifact@v3
         with:
           name: bin

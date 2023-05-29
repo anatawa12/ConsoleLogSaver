@@ -25,4 +25,7 @@
     <data name="UpdateRunningUnityList" xml:space="preserve">
         <value>実行中のUnity一覧を更新</value>
     </data>
+    <data name="VersionAndCheckingForUpdates" xml:space="preserve">
+        <value>Version {0}. 更新を確認中...</value>
+    </data>
 </root>

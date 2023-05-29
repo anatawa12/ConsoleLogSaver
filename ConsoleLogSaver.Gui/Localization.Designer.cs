@@ -92,5 +92,11 @@ namespace Anatawa12.ConsoleLogSaver.Gui {
                 return ResourceManager.GetString("CopyToClipboard", resourceCulture);
             }
         }
+        
+        internal static string VersionAndCheckingForUpdates {
+            get {
+                return ResourceManager.GetString("VersionAndCheckingForUpdates", resourceCulture);
+            }
+        }
     }
 }

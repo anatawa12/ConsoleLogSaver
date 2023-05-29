@@ -75,7 +75,8 @@ void PrintHelp(int exitCode)
 {
     var process = Environment.GetCommandLineArgs()[0];
     Console.Error.WriteLine($"{process} [OPTIONS] <unity pid>");
-    Console.Error.WriteLine("Experimental ConsoleLogSaver with mono debug protocol");
+    Console.Error.WriteLine($"ConsoleLogSaver {ConsoleLogSaver.Version}");
+    Console.Error.WriteLine("ConsoleLogSaver with mono debug protocol");
     Console.Error.WriteLine("");
     Console.Error.WriteLine("OPTIONS:");
     Console.Error.WriteLine("\t--hide-user-name: enable Hide User Name log filter");

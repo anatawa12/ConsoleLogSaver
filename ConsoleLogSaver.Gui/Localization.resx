@@ -25,4 +25,7 @@
     <data name="CopyToClipboard">
         <value>Copy to Clipboard</value>
     </data>
+    <data name="VersionAndCheckingForUpdates" xml:space="preserve">
+        <value>Version {0}. Checking for updates...</value>
+    </data>
 </root>

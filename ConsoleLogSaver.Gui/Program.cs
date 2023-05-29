@@ -23,7 +23,7 @@ sealed class MainWindow : Form
         Height = 400;
         Text = "Console Log Saver";
 
-        UnityInstances = AddControl(95, new ListView
+        UnityInstances = AddControl(70, new ListView
         {
             View = View.Details,
             Scrollable = true,
@@ -37,6 +37,8 @@ sealed class MainWindow : Form
         UnityInstances.SelectedIndexChanged += (_, _) => SetButtonEnabled();
 
         AddButton(Localization.UpdateRunningUnityList, (_, _) => ReloadUnity());
+
+        AddControl(new Label { Text = string.Format(Localization.VersionAndCheckingForUpdates, ConsoleLogSaver.Version) }, 15);
 
         AddControl(new Label { Text = Localization.SecuritySettings }, 15);
 

@@ -41,6 +41,16 @@ public class ConsoleLogSaver
         }
     }
 
+    public static string Version
+    {
+        get
+        {
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            Debug.Assert(version != null, nameof(version) + " != null");
+            return $"{version.Major}.{version.Minor}.{version.Build}";
+        }
+    }
+
     public async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
     {
         using var scope = await session.WaitAndRunInMainThread();

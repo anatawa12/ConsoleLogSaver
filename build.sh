@@ -27,6 +27,7 @@ build_gui() {
   rm -rf "${PUBLISH:?}/bin" "${PUBLISH:?}/ConsoleLogSaver.Gui.zip"
 
   dotnet publish ./ConsoleLogSaver.Gui/ConsoleLogSaver.Gui.csproj -c:Release
+  # because of https://github.com/dotnet/runtime/issues/3828, we need to fix subsystem of PE file
   dotnet run --project PEFlagSetter "$PUBLISH/ConsoleLogSaver.Gui.exe"
 
   mkdir -p "$PUBLISH/bin"

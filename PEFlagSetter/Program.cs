@@ -1,4 +1,6 @@
-﻿using System.Buffers.Binary;
+﻿// because of https://github.com/dotnet/runtime/issues/3828, we need to fix subsystem of PE file
+
+using System.Buffers.Binary;
 using System.IO.MemoryMappedFiles;
 
 const int bufSize = 1024;

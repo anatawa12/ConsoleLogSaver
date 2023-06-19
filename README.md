@@ -1,4 +1,4 @@
-Compile Log Saver
+Console Log Saver
 ===
 
 The tool to share Unity console log with friend who is good to error resolving.

@@ -78,8 +78,8 @@ abstract class StaticWrapperBase : WrapperBase<TypeMirror>
     {
     }
     
-    protected StaticWrapperBase(ThreadMirror thread, string? assembly, string type)
-        : this(thread.VirtualMachine.FindType(assembly, type), thread)
+    protected StaticWrapperBase(ThreadMirror thread, string type)
+        : this(thread.VirtualMachine.FindType(null, type), thread)
     {
     }
 
@@ -96,7 +96,7 @@ abstract class StaticWrapperBase : WrapperBase<TypeMirror>
 
 class LogEntriesWrapper : StaticWrapperBase
 {
-    public LogEntriesWrapper(ThreadMirror thread) : base(thread, "UnityEditor", "UnityEditor.LogEntries")
+    public LogEntriesWrapper(ThreadMirror thread) : base(thread, "UnityEditor.LogEntries")
     {
     }
 
@@ -138,7 +138,7 @@ class LogEntriesWrapper : StaticWrapperBase
 
 class ApplicationWrapper : StaticWrapperBase
 {
-    public ApplicationWrapper(ThreadMirror thread) : base(thread, "UnityEngine.CoreModule", "UnityEngine.Application")
+    public ApplicationWrapper(ThreadMirror thread) : base(thread, "UnityEngine.Application")
     {
     }
 
@@ -149,7 +149,7 @@ class ApplicationWrapper : StaticWrapperBase
 
 class EditorUserBuildSettingsWrapper : StaticWrapperBase
 {
-    public EditorUserBuildSettingsWrapper(ThreadMirror thread) : base(thread, "UnityEditor", "UnityEditor.EditorUserBuildSettings")
+    public EditorUserBuildSettingsWrapper(ThreadMirror thread) : base(thread, "UnityEditor.EditorUserBuildSettings")
     {
     }
 
@@ -160,7 +160,7 @@ class EditorUserBuildSettingsWrapper : StaticWrapperBase
 
 class DirectoryWrapper : StaticWrapperBase
 {
-    public DirectoryWrapper(ThreadMirror thread) : base(thread, null, "System.IO.Directory")
+    public DirectoryWrapper(ThreadMirror thread) : base(thread, "System.IO.Directory")
     {
     }
 
@@ -186,7 +186,7 @@ class LogEntryWrapper : ObjectWrapperBase
 
     public static LogEntryWrapper New(ThreadMirror thread)
     {
-        var logEntryType = thread.VirtualMachine.FindType("UnityEditor", "UnityEditor.LogEntry");
+        var logEntryType = thread.VirtualMachine.FindType(null, "UnityEditor.LogEntry");
         var ctor = logEntryType.GetMethodsByNameFlags(".ctor",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                 false)

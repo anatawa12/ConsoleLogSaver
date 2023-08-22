@@ -38,11 +38,11 @@ foreach (var s in args)
     }
 }
 
-DebuggerSession session;
+DebuggerSession sessionInit;
 
 if (pidIn is { } pid)
 {
-    session = await DebuggerSession.Connect(pid);
+    sessionInit = await DebuggerSession.Connect(pid);
 }
 else
 {
@@ -55,7 +55,7 @@ else
             Console.Error.WriteLine(
                 $"WARNING: Multiple Unity Editors found. using {process[0].Pid} for {process[1].ProjectRoot}");
 
-        session = process[0];
+        sessionInit = process[0];
     }
     catch
     {
@@ -68,6 +68,7 @@ else
         foreach (var debuggerSession in process.Skip(1)) debuggerSession.Dispose();
     }
 }
+using DebuggerSession session = sessionInit;
 
 Console.WriteLine(LogFileWriter.WriteToString(await saver.Collect(session)));
 

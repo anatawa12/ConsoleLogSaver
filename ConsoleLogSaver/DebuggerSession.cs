@@ -159,7 +159,7 @@ public class DebuggerSession : IDisposable
         {
             var vm = _vm;
             _vm = null;
-            vm.Disconnect();
+            vm.Detach();
         }
     }
 }

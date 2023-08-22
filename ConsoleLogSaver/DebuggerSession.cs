@@ -51,7 +51,7 @@ public class DebuggerSession : IDisposable
         {
             var j = i;
             // ReSharper disable once MethodSupportsCancellation
-            tasks[i] = Task.Run(async () => { sessions[j] = await Connect(processes[j], token); });
+            tasks[i] = Task.Run(async () => { sessions[j] = await Connect(processes[j], token); }, token);
         }
 
         source.CancelAfter(connectTimeout);

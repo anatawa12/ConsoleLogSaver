@@ -22,6 +22,12 @@
     <data name="HideUserHome">
         <value>Hide User Home</value>
     </data>
+    <data name="HideAwsApiKey">
+        <value>Hide AWS API Key</value>
+    </data>
+    <data name="HideAwsUploadSignature">
+        <value>Hide AWS Upload Signature</value>
+    </data>
     <data name="SaveToFile">
         <value>Save to File</value>
     </data>

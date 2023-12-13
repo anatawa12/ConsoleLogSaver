@@ -87,6 +87,18 @@ namespace Anatawa12.ConsoleLogSaver.Gui {
             }
         }
         
+        internal static string HideAwsApiKey {
+            get {
+                return ResourceManager.GetString("HideAwsApiKey", resourceCulture);
+            }
+        }
+        
+        internal static string HideAwsUploadSignature {
+            get {
+                return ResourceManager.GetString("HideAwsUploadSignature", resourceCulture);
+            }
+        }
+        
         internal static string SaveToFile {
             get {
                 return ResourceManager.GetString("SaveToFile", resourceCulture);

@@ -27,6 +27,12 @@ for (var i = 0; i < args.Length; i++)
         case "--show-os-info":
             saver.HideOsInfo = false;
             break;
+        case "--hide-aws-upload-signature":
+            saver.HideAwsUploadSignature = true;
+            break;
+        case "--show-aws-upload-signature":
+            saver.HideAwsUploadSignature = false;
+            break;
         case "--list":
             await FindProcesses();
             break;

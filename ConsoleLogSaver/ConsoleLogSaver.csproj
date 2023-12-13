@@ -6,7 +6,7 @@
         <LangVersion>11</LangVersion>
         <Nullable>enable</Nullable>
 
-        <AssemblyVersion>1.2.0</AssemblyVersion>
+        <AssemblyVersion>1.2.1</AssemblyVersion>
     </PropertyGroup>
 
     <ItemGroup>

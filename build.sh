@@ -15,7 +15,7 @@ cp_if() {
 
 # build
 build_cli() {
-  for target in osx-arm64 osx-x64 win-x64; do
+  for target in osx-arm64 osx-x64 win-x64 linux-x64; do
     dotnet publish ./ConsoleLogSaver.Cli/ConsoleLogSaver.Cli.csproj -r "$target" -c:Release
     PUBLISH="./ConsoleLogSaver.Cli/bin/Release/$FRAMEWORK/$target/publish"
     cp_if "$PUBLISH/ConsoleLogSaver.Cli"     "bin/ConsoleLogSaver.Cli-$target"

@@ -93,6 +93,7 @@ Console.WriteLine(LogFileWriter.WriteToString(await saver.Collect(session)));
 void PrintHelp(int exitCode)
 {
     var process = Environment.GetCommandLineArgs()[0];
+    process = Path.GetFileName(process);
     Console.Error.WriteLine($"{process} [OPTIONS] <unity pid>");
     Console.Error.WriteLine($"ConsoleLogSaver {CheckForUpdate.CurrentVersion}");
     Console.Error.WriteLine("ConsoleLogSaver with mono debug protocol");

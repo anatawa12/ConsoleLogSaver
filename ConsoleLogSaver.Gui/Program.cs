@@ -34,7 +34,7 @@ sealed class MainWindow : Form
             FullRowSelect = true,
             Columns =
             {
-                new ColumnHeader { Text = "PID", Width = -2 },
+                new ColumnHeader { Text = "PID", Width = 40 },
                 new ColumnHeader { Text = "Project Path", Width = -2 },
             },
         });

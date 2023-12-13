@@ -45,6 +45,12 @@ namespace Anatawa12.ConsoleLogSaver.Gui {
             }
         }
         
+        internal static string TwoInstanceDetected {
+            get {
+                return ResourceManager.GetString("TwoInstanceDetected", resourceCulture);
+            }
+        }
+        
         internal static string UpdateRunningUnityList {
             get {
                 return ResourceManager.GetString("UpdateRunningUnityList", resourceCulture);

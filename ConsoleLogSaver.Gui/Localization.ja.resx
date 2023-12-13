@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <root>
+    <data name="TwoInstanceDetected">
+        <value>二重起動を検出しました</value>
+    </data>
     <data name="SecuritySettings" xml:space="preserve">
         <value>セキュリティ設定</value>
     </data>

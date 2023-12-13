@@ -16,7 +16,23 @@ sealed class MainWindow : Form
     [STAThread]
     public static void Main()
     {
-        Application.Run(new MainWindow());
+        using var mutex = new Mutex(false, "com.anatawa12.console-log-saver", out var createdNew);
+        if (createdNew)
+        {
+            
+            try
+            {
+                Application.Run(new MainWindow());
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+        else
+        {
+            MessageBox.Show(Localization.TwoInstanceDetected, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     public MainWindow()

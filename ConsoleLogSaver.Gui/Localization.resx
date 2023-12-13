@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <root>
+    <data name="TwoInstanceDetected">
+        <value>Two Instance Detected</value>
+    </data>
     <data name="UpdateRunningUnityList">
         <value>Update Running Unity List</value>
     </data>

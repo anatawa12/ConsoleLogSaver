@@ -70,8 +70,43 @@ public class DebuggerSession : IDisposable
         }
     }
 
-    public static int[] FindUnityProcess() =>
-        Process.GetProcessesByName("Unity").Select(x => x.Id).ToArray();
+    public static int[] FindUnityProcess()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            // For linux, Process.GetProcessesByName("Unity") does not work since
+            // process name seen from net 6.0 / 7.0 is `Main Thread`.
+            // Therefore, use `/proc/{pid}/cmdline` to get process name instead.
+            // see https://github.com/anatawa12/ConsoleLogSaver/issues/21
+            
+            return Process.GetProcesses()
+                .Where(p =>
+                {
+                    try
+                    {
+                        return ProcessPathLooksUnity(File.ReadAllBytes($"/proc/{p.Id}/cmdline"));
+                    }
+                    catch
+                    {
+                        // might be the process has been terminated
+                        return false;
+                    }
+                })
+                .Select(x => x.Id)
+                .ToArray();
+        }
+        else
+        {
+            return Process.GetProcessesByName("Unity").Select(x => x.Id).ToArray();
+        }
+    }
+
+    private static bool ProcessPathLooksUnity(ReadOnlySpan<byte> cmdLine)
+    {
+        var nullAt = cmdLine.IndexOf((byte)0);
+        var length = nullAt != -1 ? nullAt : cmdLine.Length;
+        return cmdLine[..length].EndsWith("Unity"u8);
+    }
 
     public static async Task<DebuggerSession[]> ConnectAllUnityProcesses(TimeSpan connectTimeout)
     {

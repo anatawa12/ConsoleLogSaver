@@ -26,7 +26,43 @@ public class DebuggerSession : IDisposable
 
     public static async Task<DebuggerSession> Connect(int pid, CancellationToken cancellationToken = default)
     {
-        return await ConnectInternal(pid, 56000 + pid % 1000, cancellationToken).ConfigureAwait(false);
+        var ports = new[]
+        {
+            56000 + pid % 1000,
+            18000 + pid % 1000,
+        };
+
+        using var ourFinishTokenSource = new CancellationTokenSource();
+        using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ourFinishTokenSource.Token);
+        var linkedToken = linkedSource.Token;
+            
+        var complement = new TaskCompletionSource<DebuggerSession>();
+
+        var connectTasks = new Task[ports.Length];
+        for (var i = 0; i < connectTasks.Length; i++)
+        {
+            var port = ports[i];
+            connectTasks[i] = Task.Run(async () =>
+            {
+                var session = await ConnectInternal(pid, port, linkedToken);
+                if (!complement.TrySetResult(session))
+                    session.Dispose();
+            }, linkedToken);
+        }
+
+        var allTask = Task.WhenAll(connectTasks);
+
+        var connectedTask = complement.Task;
+        var task = await Task.WhenAny(allTask, connectedTask);
+
+        ourFinishTokenSource.CancelAfter(TimeSpan.Zero);
+
+        if (task == connectedTask)
+        {
+            return connectedTask.Result;
+        }
+
+        throw allTask.Exception!;
     }
 
     public static async Task<DebuggerSession> ConnectByPort(int port, CancellationToken cancellationToken = default) =>
@@ -39,10 +75,14 @@ public class DebuggerSession : IDisposable
         {
             await session.DoConnect(cancellationToken);
         }
-        catch
+        catch (Exception e)
         {
             session.Dispose();
-            throw;
+
+            if (e is OperationCanceledException cancell && cancell.CancellationToken == cancellationToken)
+                throw;
+            else
+                throw new IOException($"Cannot connect to process (trying {port} for {pid})", e);
         }
 
         return session;

@@ -41,31 +41,59 @@ public class DebuggerSession : IDisposable
 
     private static async Task<DebuggerSession> ConnectInternal(int pid, int[] ports, CancellationToken cancellationToken = default)
     {
-        var sessions = new DebuggerSession[ports.Length];
+        var sessions = new DebuggerSession?[ports.Length];
 
         for (var i = 0; i < sessions.Length; i++)
             sessions[i] = new DebuggerSession(pid, ports[i]);
 
         try
         {
-            var task = await Task.WhenAny(sessions.Select(async (x, i) =>
-            {
-                await x.DoConnect(cancellationToken);
-                return i;
-            }));
+            using var ourFinishTokenSource = new CancellationTokenSource();
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ourFinishTokenSource.Token);
+            var linkedToken = linkedSource.Token;
 
-            var index = task.Result;
+            var complement = new TaskCompletionSource<DebuggerSession>();
+
+            var tasks = new Task[ports.Length];
 
             for (var i = 0; i < sessions.Length; i++)
-                if (i != index)
-                    sessions[i].Dispose();
+            {
+                var index = i;
+                tasks[i] = Task.Run(async () =>
+                {
+                    var session = sessions[index]!;
+                    try
+                    {
+                        await session.DoConnect(linkedToken);
+                        complement.TrySetResult(session);
+                    }
+                    catch
+                    {
+                        session.Dispose();
+                        sessions[index] = null;
+                        throw;
+                    }
+                });
+            }
 
-            return sessions[index];
+            var allTask = Task.WhenAll(tasks);
+
+            ourFinishTokenSource.CancelAfter(TimeSpan.Zero);
+
+            var connectedTask = complement.Task;
+            var task = await Task.WhenAny(allTask, connectedTask);
+
+            if (task == connectedTask)
+            {
+                return connectedTask.Result;
+            }
+
+            throw allTask.Exception!;
         }
         catch
         {
             foreach (var session in sessions)
-                session.Dispose();
+                session?.Dispose();
             throw;
         }
     }

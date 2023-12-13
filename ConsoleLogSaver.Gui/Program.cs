@@ -26,7 +26,7 @@ sealed class MainWindow : Form
         Height = 400;
         Text = "Console Log Saver";
 
-        UnityInstances = AddControl(70, new ListView
+        UnityInstances = AddControl(80, new ListView
         {
             View = View.Details,
             Scrollable = true,
@@ -50,14 +50,34 @@ sealed class MainWindow : Form
 
         AddControl(new Label { Text = Localization.SecuritySettings }, 15);
 
-        AddControl(new CheckBox { Text = Localization.UnityVersion, Checked = true, Enabled = false }, 15);
+        var checkboxYOffset = 0;
+        
+        var checkboxPanel = new Panel();
+        checkboxPanel.AutoScroll = true;
+
+        void AddFieldCheckBox(CheckBox box)
+        {
+            const int width = 300;
+            const int height = 15;
+
+            box.Location = new Point(10, checkboxYOffset);
+            box.Size = new Size(width, height);
+            checkboxPanel.Controls.Add(box);
+            checkboxYOffset += height + 10;
+        }
 
         void FieldCheckBox(string text, bool @checked, Action<bool> setter)
         {
-            var box = AddControl(new CheckBox { Text = text, Checked = @checked }, 15);
+            var box = new CheckBox { Text = text, Checked = @checked };
             box.CheckedChanged += (_, _) => setter(box.Checked);
+            AddFieldCheckBox(box);
         }
 
+        void DisabledCheckBox(string text) =>
+            AddFieldCheckBox(new CheckBox { Text = text, Checked = true, Enabled = false });
+        AddControl(checkboxPanel, 80);
+
+        DisabledCheckBox(Localization.UnityVersion);
         FieldCheckBox(Localization.HideOSInfo, _saver.HideOsInfo, v => _saver.HideOsInfo = v);
         FieldCheckBox(Localization.HideUserName, _saver.HideUserName, v => _saver.HideUserName = v);
         FieldCheckBox(Localization.HideUserHome, _saver.HideUserHome, v => _saver.HideUserHome = v);

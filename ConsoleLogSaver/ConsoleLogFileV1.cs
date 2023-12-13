@@ -7,11 +7,13 @@ namespace Anatawa12.ConsoleLogSaver
 {
     public class ConsoleLogFileV1
     {
+        public int MinorVersion { get; }
         public IReadOnlyList<(string name, string value)> HeaderValues { get; }
         public IReadOnlyList<Section> Sections { get; }
 
         private ConsoleLogFileV1(Builder builder)
         {
+            MinorVersion = builder.MinorVersion;
             HeaderValues = builder.HeaderValues.ToList();
             Sections = builder.Sections.ToList();
         }
@@ -20,12 +22,14 @@ namespace Anatawa12.ConsoleLogSaver
         {
             private FieldsBuilder _fields = new FieldsBuilder("Separator");
             private List<Section> _sections = new List<Section>();
+            public int MinorVersion { get; }
 
             public IReadOnlyList<(string name, string value)> HeaderValues => _fields.Fields;
             public IReadOnlyList<Section> Sections => _sections;
 
-            public Builder()
+            public Builder(int minorVersion)
             {
+                MinorVersion = minorVersion;
             }
 
             public ConsoleLogFileV1 Build() => new ConsoleLogFileV1(this);
@@ -166,7 +170,7 @@ namespace Anatawa12.ConsoleLogSaver
 
         private static void AppendFile(this StringBuilder builder, string separator, ConsoleLogFileV1 file)
         {
-            builder.Append("ConsoleLogSaverData/1.0\n");
+            builder.Append($"ConsoleLogSaverData/1.{file.MinorVersion}\n");
             builder.AppendFields(new[] {("Separator", separator)}.Concat(file.HeaderValues));
             builder.Append(separator).Append('\n');
             foreach (var section in file.Sections)

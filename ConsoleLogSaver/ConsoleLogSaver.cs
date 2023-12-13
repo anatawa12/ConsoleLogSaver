@@ -51,12 +51,13 @@ public partial class ConsoleLogSaver
         using var scope = await session.WaitAndRunInMainThread();
         var thread = scope.Thread;
 
-        var fileBuilder = new ConsoleLogFileV1.Builder();
+        var fileBuilder = new ConsoleLogFileV1.Builder(0);
 
         var application = new ApplicationWrapper(thread);
         var editorUserBuildSettings = new EditorUserBuildSettingsWrapper(thread);
         var projectRoot = new DirectoryWrapper(thread).GetCurrentDirectory();
         // header
+        fileBuilder.AddField("Vendor", "ConsoleLogSaver/" + CheckForUpdate.CurrentVersion);
         fileBuilder.AddField("Unity-Version", application.UnityVersion);
         fileBuilder.AddField("Build-Target", editorUserBuildSettings.ActiveBuildTarget.ToString());
         if (!HideOsInfo) fileBuilder.AddField("Editor-Platform", RuntimeInformation.OSDescription);

@@ -1,16 +1,15 @@
-using System.Diagnostics;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Mono.Debugger.Soft;
 
 namespace Anatawa12.ConsoleLogSaver;
 
-public class ConsoleLogSaver
+public partial class ConsoleLogSaver
 {
     public bool HideOsInfo = false;
     public bool HideUserName = true;
     public bool HideUserHome = true;
+    public bool HideAwsUploadSignature = true;
 
     private Regex? _homePatternRegex;
 
@@ -41,6 +40,12 @@ public class ConsoleLogSaver
         }
     }
 
+    [GeneratedRegex(@"(?<=AWSAccessKeyId=)[^&\s]+", RegexOptions.IgnoreCase)]
+    private static partial Regex AwsAccessKeyIdGetParameterRegex();
+
+    [GeneratedRegex(@"(?<=Signature=)[^&\s]+", RegexOptions.IgnoreCase)]
+    private static partial Regex SignatureGetParameterRegex();
+
     public async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
     {
         using var scope = await session.WaitAndRunInMainThread();
@@ -57,6 +62,8 @@ public class ConsoleLogSaver
         if (!HideOsInfo) fileBuilder.AddField("Editor-Platform", RuntimeInformation.OSDescription);
         if (HideUserName) fileBuilder.AddField("Hidden-Data", "user-name");
         if (HideUserHome) fileBuilder.AddField("Hidden-Data", "user-home");
+        fileBuilder.AddField("Hidden-Data", "aws-access-key-id-param");
+        if (HideAwsUploadSignature) fileBuilder.AddField("Hidden-Data", "signature-param");
         AppendUpm(fileBuilder, projectRoot);
         AppendVpm(fileBuilder, projectRoot);
         AppendLog(thread, fileBuilder);
@@ -145,6 +152,9 @@ public class ConsoleLogSaver
 
     private string ReplaceMessage(string str)
     {
+        str = AwsAccessKeyIdGetParameterRegex().Replace(str, "${aws-access-key-id-param}");
+        if (HideAwsUploadSignature)
+            str = SignatureGetParameterRegex().Replace(str, "${signature-param}");
         if (HomePatternRegex is { } homePatternRegex)
             str = homePatternRegex.Replace(str, "${user-home}");
         if (NamePatternRegex is { } namePatternRegex)

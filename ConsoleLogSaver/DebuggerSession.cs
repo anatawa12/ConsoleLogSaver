@@ -249,7 +249,18 @@ public class DebuggerSession : IDisposable
             VirtualMachineManager.EndConnect, endpoint, null);
     }
 
+    ~DebuggerSession()
+    {
+        Dispose(false);
+    }
+
     public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        Dispose(true);
+    }
+
+    public void Dispose(bool disposing)
     {
         if (_vm != null)
         {

@@ -134,7 +134,7 @@ sealed class MainWindow : Form
         return control;
     }
 
-    private async void ReloadUnity()
+    private void DisconnectAll()
     {
         foreach (ListViewItem item in UnityInstances.Items)
         {
@@ -147,6 +147,11 @@ sealed class MainWindow : Form
                 // ignored
             }
         }
+    }
+
+    private async void ReloadUnity()
+    {
+        DisconnectAll();
 
         UnityInstances.Items.Clear();
         SetButtonEnabled();
@@ -155,6 +160,12 @@ sealed class MainWindow : Form
 
         UnityInstances.Items.AddRange(processes.Select(s => new UnitySessionItem(s)).ToArray<ListViewItem>());
         SetButtonEnabled();
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        base.OnFormClosed(e);
+        DisconnectAll();
     }
 
     private async Task<ConsoleLogFileV1?> CollectData()

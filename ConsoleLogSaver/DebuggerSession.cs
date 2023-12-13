@@ -9,21 +9,40 @@ namespace Anatawa12.ConsoleLogSaver;
 public class DebuggerSession : IDisposable
 {
     private readonly int _pid;
+    private readonly int _port;
     private VirtualMachine? _vm;
     private string _projectRoot = default!;
 
     public VirtualMachine VirtualMachine => _vm ?? throw new ObjectDisposedException("disposed");
     public string ProjectRoot => _projectRoot ?? throw new InvalidOperationException("bad state");
     public int Pid => _pid;
+    public int Port => _port;
 
-    private DebuggerSession(int pid)
+    private DebuggerSession(int pid, int port)
     {
         _pid = pid;
+        _port = port;
     }
 
     public static async Task<DebuggerSession> Connect(int pid, CancellationToken cancellationToken = default)
     {
-        var session = new DebuggerSession(pid);
+        var session = new DebuggerSession(pid, 56000 + pid % 1000);
+        try
+        {
+            await session.DoConnect(cancellationToken);
+        }
+        catch
+        {
+            session.Dispose();
+            throw;
+        }
+
+        return session;
+    }
+
+    public static async Task<DebuggerSession> ConnectByPort(int port, CancellationToken cancellationToken = default)
+    {
+        var session = new DebuggerSession(-1, port);
         try
         {
             await session.DoConnect(cancellationToken);
@@ -85,7 +104,7 @@ public class DebuggerSession : IDisposable
     {
         _vm = await ConnectToVirtualMachine(new IPEndPoint(
             new IPAddress(stackalloc byte[] { 127, 0, 0, 1 }),
-            56000 + _pid % 1000));
+            _port));
         
         if (_vm == null) throw new IOException($"Cannot connect to process");
 

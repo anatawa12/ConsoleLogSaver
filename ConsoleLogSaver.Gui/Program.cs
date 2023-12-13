@@ -35,7 +35,7 @@ sealed class MainWindow : Form
             Columns =
             {
                 new ColumnHeader { Text = "PID", Width = 40 },
-                new ColumnHeader { Text = "Project Path", Width = -2 },
+                new ColumnHeader { Text = "Project Name (Project Path)", Width = -2 },
             },
         });
         UnityInstances.SelectedIndexChanged += (_, _) => SetButtonEnabled();
@@ -211,7 +211,11 @@ sealed class MainWindow : Form
 
     class UnitySessionItem : ListViewItem
     {
-        public UnitySessionItem(DebuggerSession session) : base(new[] { session.Pid.ToString(), session.ProjectRoot })
+        public UnitySessionItem(DebuggerSession session) : base(new[]
+        {
+            session.Pid.ToString(), 
+            $"{Path.GetFileName(session.ProjectRoot)} ({session.ProjectRoot})",
+        })
         {
             Session = session;
         }

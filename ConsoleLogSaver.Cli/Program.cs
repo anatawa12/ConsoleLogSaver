@@ -1,10 +1,12 @@
 ﻿using Anatawa12.ConsoleLogSaver;
 
 int? pidIn = null;
+int? portIn = null;
 var saver = new ConsoleLogSaver();
 
-foreach (var s in args)
+for (var i = 0; i < args.Length; i++)
 {
+    var s = args[i];
     switch (s)
     {
         case "--hide-user-name":
@@ -32,10 +34,22 @@ foreach (var s in args)
         case "-h":
             PrintHelp(0);
             break;
+        case "--pid":
+            pidIn = int.Parse(args[++i]);
+            break;
+        case "--port":
+            portIn = int.Parse(args[++i]);
+            break;
         default:
             pidIn = int.Parse(s);
             break;
     }
+}
+
+if (pidIn is not null && portIn is not null)
+{
+    Console.Error.WriteLine("both PID and Port are specified.");
+    Environment.Exit(-1);
 }
 
 DebuggerSession sessionInit;
@@ -43,6 +57,10 @@ DebuggerSession sessionInit;
 if (pidIn is { } pid)
 {
     sessionInit = await DebuggerSession.Connect(pid);
+}
+else if (portIn is { } port)
+{
+    sessionInit = await DebuggerSession.ConnectByPort(port);
 }
 else
 {

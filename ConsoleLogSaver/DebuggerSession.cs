@@ -26,34 +26,48 @@ public class DebuggerSession : IDisposable
 
     public static async Task<DebuggerSession> Connect(int pid, CancellationToken cancellationToken = default)
     {
-        var session = new DebuggerSession(pid, 56000 + pid % 1000);
-        try
+        return await ConnectInternal(pid, new []
         {
-            await session.DoConnect(cancellationToken);
-        }
-        catch
-        {
-            session.Dispose();
-            throw;
-        }
-
-        return session;
+            56000 + pid % 1000,
+            18000 + pid % 1000,
+        }, cancellationToken);
     }
 
     public static async Task<DebuggerSession> ConnectByPort(int port, CancellationToken cancellationToken = default)
     {
-        var session = new DebuggerSession(-1, port);
+        return await ConnectInternal(-1, new[] { port }, cancellationToken);
+    }
+    
+
+    private static async Task<DebuggerSession> ConnectInternal(int pid, int[] ports, CancellationToken cancellationToken = default)
+    {
+        var sessions = new DebuggerSession[ports.Length];
+
+        for (var i = 0; i < sessions.Length; i++)
+            sessions[i] = new DebuggerSession(pid, ports[i]);
+
         try
         {
-            await session.DoConnect(cancellationToken);
+            var task = await Task.WhenAny(sessions.Select(async (x, i) =>
+            {
+                await x.DoConnect(cancellationToken);
+                return i;
+            }));
+
+            var index = task.Result;
+
+            for (var i = 0; i < sessions.Length; i++)
+                if (i != index)
+                    sessions[i].Dispose();
+
+            return sessions[index];
         }
         catch
         {
-            session.Dispose();
+            foreach (var session in sessions)
+                session.Dispose();
             throw;
         }
-
-        return session;
     }
 
     public static int[] FindUnityProcess() =>

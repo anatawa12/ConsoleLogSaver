@@ -26,23 +26,15 @@ public class DebuggerSession : IDisposable
 
     public static async Task<DebuggerSession> Connect(int pid, CancellationToken cancellationToken = default)
     {
-        var session = new DebuggerSession(pid, 56000 + pid % 1000);
-        try
-        {
-            await session.DoConnect(cancellationToken);
-        }
-        catch
-        {
-            session.Dispose();
-            throw;
-        }
-
-        return session;
+        return await ConnectInternal(pid, 56000 + pid % 1000, cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task<DebuggerSession> ConnectByPort(int port, CancellationToken cancellationToken = default)
+    public static async Task<DebuggerSession> ConnectByPort(int port, CancellationToken cancellationToken = default) =>
+        await ConnectInternal(-1, port, cancellationToken).ConfigureAwait(false);
+
+    private static async Task<DebuggerSession> ConnectInternal(int pid, int port, CancellationToken cancellationToken = default)
     {
-        var session = new DebuggerSession(-1, port);
+        var session = new DebuggerSession(pid, port);
         try
         {
             await session.DoConnect(cancellationToken);

@@ -111,6 +111,10 @@ void PrintHelp(int exitCode)
     Console.Error.WriteLine("\t--show-user-home: disable Hide User Home log filter");
     Console.Error.WriteLine("\t--hide-os-info: enable Hide OS Info flag");
     Console.Error.WriteLine("\t--show-os-info: disable Hide OS Info flag");
+    Console.Error.WriteLine("\t--hide-aws-upload-signature: enable Hide AWS Upload Signature flag");
+    Console.Error.WriteLine("\t--show-aws-upload-signature: disable Hide AWS Upload Signature flag");
+    Console.Error.WriteLine("\t--pid <pid>: specify pid of unity");
+    Console.Error.WriteLine("\t--port <port>: specify debugger port of unity");
     Console.Error.WriteLine("\t--list: list unity processes and exit");
     Console.Error.WriteLine("\t--help: show this message and exit");
     Environment.Exit(exitCode);

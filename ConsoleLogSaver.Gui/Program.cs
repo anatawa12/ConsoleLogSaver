@@ -31,6 +31,7 @@ sealed class MainWindow : Form
             View = View.Details,
             Scrollable = true,
             MultiSelect = false,
+            FullRowSelect = true,
             Columns =
             {
                 new ColumnHeader { Text = "PID", Width = -2 },

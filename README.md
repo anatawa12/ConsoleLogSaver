@@ -27,6 +27,11 @@ How to Use
 
 使い方
 ---
+
+[こちらのAzukimochiさんによるnote記事][note-by-azukimochi]も参考にしてください
+
+[note-by-azukimochi]: https://note.com/azukimochi25/n/n042c495e55f4
+
 1. もしUnity 2022以降を使っている場合は、Unity Editorのデバッグモードが有効になっていることを確認する。\
    Unityウィンドウの左下にオレンジ色の虫があるか確認してください。
 

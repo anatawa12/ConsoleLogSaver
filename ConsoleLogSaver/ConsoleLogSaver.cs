@@ -46,6 +46,13 @@ public partial class ConsoleLogSaver
     [GeneratedRegex(@"(?<=Signature=)[^&\s]+", RegexOptions.IgnoreCase)]
     private static partial Regex SignatureGetParameterRegex();
 
+    [GeneratedRegex(
+        """
+        ("assetUrl"\s*:\s*")((?:[^\u0000-\u001F"\\]|\\(?:u[a-fA-F0-9]{4}|[^"\\/bfnrt]))*)(")
+        """
+    )]
+    private static partial Regex AssetUrlRegex();
+
     public async Task<ConsoleLogFileV1> Collect(DebuggerSession session)
     {
         using var scope = await session.WaitAndRunInMainThread();
@@ -64,6 +71,7 @@ public partial class ConsoleLogSaver
         if (HideUserName) fileBuilder.AddField("Hidden-Data", "user-name");
         if (HideUserHome) fileBuilder.AddField("Hidden-Data", "user-home");
         fileBuilder.AddField("Hidden-Data", "aws-access-key-id-param");
+        fileBuilder.AddField("Hidden-Data", "asset-url");
         if (HideAwsUploadSignature) fileBuilder.AddField("Hidden-Data", "signature-param");
         AppendUpm(fileBuilder, projectRoot);
         AppendVpm(fileBuilder, projectRoot);
@@ -154,6 +162,7 @@ public partial class ConsoleLogSaver
     private string ReplaceMessage(string str)
     {
         str = AwsAccessKeyIdGetParameterRegex().Replace(str, "${aws-access-key-id-param}");
+        str = AssetUrlRegex().Replace(str, m => m.Groups[1].Value + "${asset-url}" + m.Groups[3].Value);
         if (HideAwsUploadSignature)
             str = SignatureGetParameterRegex().Replace(str, "${signature-param}");
         if (HomePatternRegex is { } homePatternRegex)

@@ -25,6 +25,9 @@
     <data name="HideAwsApiKey">
         <value>Hide AWS API Key</value>
     </data>
+    <data name="HideAssetUrl">
+        <value>Hide URL to download VRChat assets</value>
+    </data>
     <data name="HideAwsUploadSignature">
         <value>Hide AWS Upload Signature</value>
     </data>

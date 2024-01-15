@@ -22,6 +22,9 @@
     <data name="HideAwsApiKey">
         <value>AWSのAPIキーを隠す</value>
     </data>
+    <data name="HideAssetUrl">
+        <value>VRChatのダウンロードURLを隠す</value>
+    </data>
     <data name="HideAwsUploadSignature" xml:space="preserve">
         <value>AWSのヘッダシグネチャを隠す</value>
     </data>

@@ -93,6 +93,12 @@ namespace Anatawa12.ConsoleLogSaver.Gui {
             }
         }
         
+        internal static string HideAssetUrl {
+            get {
+                return ResourceManager.GetString("HideAssetUrl", resourceCulture);
+            }
+        }
+        
         internal static string HideAwsUploadSignature {
             get {
                 return ResourceManager.GetString("HideAwsUploadSignature", resourceCulture);

@@ -8,6 +8,14 @@ The tool to share Unity console log with friend who is good to error resolving.
 How to Use
 ---
 
+1. If you're using Unity 2022 or later, make sure you have enabled Debugging in the Unity Editor. \
+   Please check lower-left corner of the Unity window and check if there's orange bug.
+
+   ![orange-bug-at-lower-left]
+
+   If it's gray, click it and click `Switch to debug mode` to enable Debugging.
+   If you cannot enable it (It happens in case of compilation error), 
+   restarting Unity Editor and entering safe mode will make it enabled.
 1. Download latest zip from [here][saver-zip-download]
 2. Extract the zip file
 3. Double-click `ConsoleLogSaver.Gui.exe`
@@ -19,6 +27,13 @@ How to Use
 
 使い方
 ---
+1. もしUnity 2022以降を使っている場合は、Unity Editorのデバッグモードが有効になっていることを確認する。\
+   Unityウィンドウの左下にオレンジ色の虫があるか確認してください。
+
+   ![orange-bug-at-lower-left]
+
+   グレーの場合はクリックして`Switch to debug mode`をクリックしてデバッグモードにしてください。
+   有効にできない場合は(コンパイルエラーの場合に起こります)、 Unity Editorを再起動してセーフモードで起動すると有効になります。
 1. 最新版のzipを[ここ][saver-zip-download]からダウンロードする
 2. zipファイルを展開する
 3. `ConsoleLogSaver.Gui.exe`をダブルクリックする
@@ -27,6 +42,8 @@ How to Use
    または`Copy to Clipboard`して[pastebin.com]などで共有する。\
    discordを使える場合には、discordにペーストするだけで共有できます。
 6. (エラーを解決できる人が) [web viewer tool][viewer] を使用して出力を読む。
+
+[orange-bug-at-lower-left]: readme.orange-bug.png
 
 File Format
 ---

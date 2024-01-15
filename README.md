@@ -8,7 +8,7 @@ The tool to share Unity console log with friend who is good to error resolving.
 How to Use
 ---
 
-1. If you're using Unity 2022 or later, make sure you have enabled Debugging in the Unity Editor. \
+1. If you're using Unity 2021 or later, make sure you have enabled Debugging in the Unity Editor. \
    Please check lower-left corner of the Unity window and check if there's orange bug.
 
    ![orange-bug-at-lower-left]
@@ -32,7 +32,7 @@ How to Use
 
 [note-by-azukimochi]: https://note.com/azukimochi25/n/n042c495e55f4
 
-1. もしUnity 2022以降を使っている場合は、Unity Editorのデバッグモードが有効になっていることを確認する。\
+1. もしUnity 2021以降を使っている場合は、Unity Editorのデバッグモードが有効になっていることを確認する。\
    Unityウィンドウの左下にオレンジ色の虫があるか確認してください。
 
    ![orange-bug-at-lower-left]

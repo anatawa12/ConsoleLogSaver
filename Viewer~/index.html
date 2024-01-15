@@ -58,6 +58,9 @@
         display: flex;
         align-items: center;
     }
+    .page-logs-button {
+        margin: 4px
+    }
     .page-logs-list {
         display: flex;
         flex-grow: 1;
@@ -94,8 +97,11 @@
 </style>
 <div class="page page-logs" hidden>
     <div class="page-header">
-        <button class="page-logs-back-button">Back</button>
+        <button class="page-logs-button page-logs-back-button">Back</button>
+        <button class="page-logs-button page-logs-show-project-info-button">Show Project Info</button>
     </div>
+
+    <div class="page-logs-project-info-element-content" hidden></div>
 
     <template id="page-log-template-element">
         <div class="page-logs-element" onclick="onClickLogElement(this)">

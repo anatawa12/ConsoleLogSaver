@@ -98,6 +98,7 @@ sealed class MainWindow : Form
         FieldCheckBox(Localization.HideUserName, _saver.HideUserName, v => _saver.HideUserName = v);
         FieldCheckBox(Localization.HideUserHome, _saver.HideUserHome, v => _saver.HideUserHome = v);
         DisabledCheckBox(Localization.HideAwsApiKey);
+        DisabledCheckBox(Localization.HideAssetUrl);
         FieldCheckBox(Localization.HideAwsUploadSignature, _saver.HideAwsUploadSignature, v => _saver.HideAwsUploadSignature = v);
 
         SelectionRequiredButtons = new[]

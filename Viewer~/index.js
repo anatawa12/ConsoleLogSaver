@@ -27,6 +27,7 @@
     const template = document.querySelector("#page-log-template-element");
 
     const logList = document.querySelector(".page-logs-list");
+    const projectInfoElementContent = document.querySelector(".page-logs-project-info-element-content");
 
     const input = document.querySelector('.page-input-text-area');
     document.querySelector(".page-input-parse-button").addEventListener('click', (e) => {
@@ -40,6 +41,7 @@
             alert(`Error parsing log: ${e?.message}`)
             return;
         }
+        projectInfoElementContent.textContent = createProjectInfo(parsed.headerValues);
         for (const section of parsed.sections) {
             if (section.contentType !== "log-element") continue;
 
@@ -99,6 +101,57 @@
         }
         return 'info.svg'
     }
+
+    /// @param headers {[string, string][]}
+    function createProjectInfo(headers) {
+        const packages = {};
+        let unityVersion = null;
+        let currentBuildTarget = null;
+        let editorPlatform
+
+        for (const [name, body] of headers) {
+            switch (name.toLowerCase()) {
+                case 'upm-dependency': {
+                    const [name, source] = body.split('@');
+                    packages[name] ??= {};
+                    packages[name].upm = source;
+                    break;
+                }
+                case 'vpm-dependency': {
+                    const [name, version] = body.split('@');
+                    packages[name] ??= {};
+                    packages[name].vpm = version;
+                    break;
+                }
+
+                case 'unity-version': {
+                    unityVersion = body;
+                    break;
+                }
+                case 'build-target': {
+                    currentBuildTarget = body;
+                    break;
+                }
+                case 'editor-platform': {
+                    editorPlatform = body;
+                    break;
+                }
+            }
+        }
+
+        let result = '';
+        result += `Unity version: ${unityVersion || "unknown"}\n`;
+        result += `Build target: ${currentBuildTarget || "unknown"}\n`;
+        result += `Editor platform: ${editorPlatform || "unknown"}\n`;
+        result += '\n';
+        for (const [name, value] of Object.entries(packages)) {
+            result += `${name}:\n`;
+            result += `UPM: ${value.upm || "not installed"}\n`;
+            if (value.vpm) result += `VPM: ${value.vpm}\n`;
+            result += '\n';
+        }
+        return result;
+    }
 })();
 
 (() => {
@@ -106,6 +159,12 @@
     window.onClickLogElement = (element) => {
         logBody.textContent = element.querySelector(".page-logs-element-text-full").textContent;
     };
+
+    document.querySelector(".page-logs-show-project-info-button").addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        logBody.textContent = document.querySelector(".page-logs-project-info-element-content").textContent;
+    })
 })();
 
 /**

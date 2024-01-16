@@ -80,6 +80,15 @@
     .page-logs-list[data-collapsed] > .page-logs-element[data-collapsed] {
         display: none;
     }
+    .page-logs-list[data-hide-error] > .page-logs-element[data-log-level="error"] {
+        display: none;
+    }
+    .page-logs-list[data-hide-warning] > .page-logs-element[data-log-level="warning"] {
+        display: none;
+    }
+    .page-logs-list[data-hide-info] > .page-logs-element[data-log-level="info"] {
+        display: none;
+    }
     .page-logs-element > .page-logs-element-icon {
         background: url('info.svg');
         flex-shrink: 0;

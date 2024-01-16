@@ -141,15 +141,27 @@
 
     const collapseButton = document.querySelector(".page-logs-collapse-button");
     collapseButton.addEventListener('click', (e) => {
-        const active = collapseButton.dataset.active == 'true';
-        if (active) {
-            collapseButton.dataset.active = 'false';
+        if (collapseButton.dataset.active != null) {
+            delete collapseButton.dataset.active;
             delete logList.dataset.collapsed;
         } else {
             logList.dataset.collapsed = 'true'
             collapseButton.dataset.active = 'true';
         }
     })
+
+    for (const kind of ['info', 'warning', 'error']) {
+        const button = document.querySelector(`.page-logs-${kind}-button`);
+        button.addEventListener('click', (e) => {
+            if (button.dataset.active != null) {
+                delete button.dataset.active;
+                logList.setAttribute(`data-hide-${kind}`, 'true');
+            } else {
+                button.dataset.active = 'true';
+                delete logList.removeAttribute(`data-hide-${kind}`, 'true');
+            }
+        });
+    }    
 
     /// @param headers {[string, string][]}
     function createProjectInfo(headers) {

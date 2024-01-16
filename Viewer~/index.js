@@ -27,7 +27,6 @@
     const template = document.querySelector("#page-log-template-element");
 
     const logList = document.querySelector(".page-logs-list");
-    const projectInfoElementContent = document.querySelector(".page-logs-project-info-element-content");
 
     const input = document.querySelector('.page-input-text-area');
     document.querySelector(".page-input-parse-button").addEventListener('click', (e) => {
@@ -41,17 +40,31 @@
             alert(`Error parsing log: ${e?.message}`)
             return;
         }
-        projectInfoElementContent.textContent = createProjectInfo(parsed.headerValues);
+        window.currentLog = parsed;
+
+        const elementByText = {};
+
         for (const section of parsed.sections) {
             if (section.contentType !== "log-element") continue;
 
             // sections
             // TODO: log type detection
-            const cloned = template.content.cloneNode(true);
-            cloned.querySelector(".page-logs-element-icon").src = getLogIcon(parseInt(section.getField('Mode-Raw'), 16));
+            const cloned = template.content.cloneNode(true).querySelector(".page-logs-element");
+            cloned.dataset.logLevel = getLogLevel(parseInt(section.getField('Mode-Raw'), 16));
             const lines = section.content.split(/\r?\n/g);
             cloned.querySelector(".page-logs-element-text-short").textContent = lines.length === 1 ? lines[0] : `${lines[0]}\n${lines[1]}`;
-            cloned.querySelector(".page-logs-element-text-full").textContent = section.content;
+            cloned.dataset.fullText = section.content;
+            // collapse
+            let originForText = elementByText[section.content]
+            if (originForText != null) {
+                cloned.dataset.collapsed = 'true';
+                const collasedCount = originForText.querySelector(".page-logs-element-collapsed-count");
+                collasedCount.textContent = parseInt(collasedCount.textContent) + 1;
+            } else {
+                originForText = elementByText[section.content] = cloned;
+                const collasedCount = originForText.querySelector(".page-logs-element-collapsed-count");
+                collasedCount.textContent = 1;
+            }
             children.push(cloned);
         }
         logList.replaceChildren(...children);
@@ -64,6 +77,7 @@
     document.querySelector(".page-logs-back-button").addEventListener('click', (e) => {
         e.stopPropagation();
 
+        window.currentLog = null;
         pageInput.hidden = false;
         pageLogs.hidden = true;
     })
@@ -101,6 +115,53 @@
         }
         return 'info.svg'
     }
+    function getLogLevel(mode) {
+        if ((mode & (Mode.Fatal | Mode.Assert | Mode.Error | Mode.ScriptingError | Mode.AssetImportError | Mode.ScriptCompileError | Mode.GraphCompileError | Mode.ScriptingAssertion | Mode.ScriptingException)) !== 0) {
+            return 'error';
+        }
+        if ((mode & (Mode.ScriptCompileWarning | Mode.ScriptingWarning | Mode.AssetImportWarning)) !== 0) {
+            return 'warning';
+        }
+        return 'info'
+    }
+})();
+
+(() => {
+    const logBody = document.querySelector(".page-logs-body");
+    const logList = document.querySelector(".page-logs-list");
+    window.onClickLogElement = (element) => {
+        logBody.textContent = element.dataset.fullText;
+    };
+
+    document.querySelector(".page-logs-show-project-info-button").addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        logBody.textContent = createProjectInfo(window.currentLog.headerValues);
+    })
+
+    const collapseButton = document.querySelector(".page-logs-collapse-button");
+    collapseButton.addEventListener('click', (e) => {
+        if (collapseButton.dataset.active != null) {
+            delete collapseButton.dataset.active;
+            delete logList.dataset.collapsed;
+        } else {
+            logList.dataset.collapsed = 'true'
+            collapseButton.dataset.active = 'true';
+        }
+    })
+
+    for (const kind of ['info', 'warning', 'error']) {
+        const button = document.querySelector(`.page-logs-${kind}-button`);
+        button.addEventListener('click', (e) => {
+            if (button.dataset.active != null) {
+                delete button.dataset.active;
+                logList.setAttribute(`data-hide-${kind}`, 'true');
+            } else {
+                button.dataset.active = 'true';
+                delete logList.removeAttribute(`data-hide-${kind}`, 'true');
+            }
+        });
+    }    
 
     /// @param headers {[string, string][]}
     function createProjectInfo(headers) {
@@ -152,19 +213,6 @@
         }
         return result;
     }
-})();
-
-(() => {
-    const logBody = document.querySelector(".page-logs-body");
-    window.onClickLogElement = (element) => {
-        logBody.textContent = element.querySelector(".page-logs-element-text-full").textContent;
-    };
-
-    document.querySelector(".page-logs-show-project-info-button").addEventListener('click', (e) => {
-        e.stopPropagation();
-
-        logBody.textContent = document.querySelector(".page-logs-project-info-element-content").textContent;
-    })
 })();
 
 /**

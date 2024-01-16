@@ -74,6 +74,15 @@
         line-height: 1.2em;
         border-bottom: black 1px solid;
     }
+    .page-logs-element > .page-logs-element-icon {
+        background: url('info.svg');
+    }
+    .page-logs-element[data-log-level="error"] > .page-logs-element-icon {
+        background: url('error.svg');
+    }
+    .page-logs-element[data-log-level="warning"] > .page-logs-element-icon {
+        background: url('warning.svg');
+    }
     .page-logs-element-icon {
         width: calc(2 * 1.2em);
         height: calc(2 * 1.2em);
@@ -101,13 +110,12 @@
         <button class="page-logs-button page-logs-show-project-info-button">Show Project Info</button>
     </div>
 
-    <div class="page-logs-project-info-element-content" hidden></div>
-
     <template id="page-log-template-element">
-        <div class="page-logs-element" onclick="onClickLogElement(this)">
-            <img class="page-logs-element-icon" src="error.svg" alt="icon"/>
+        <div class="page-logs-element" onclick="onClickLogElement(this)"
+             data-full-text=""
+             data-log-level="error">
+            <span class="page-logs-element-icon"></span>
             <div class="page-logs-element-text-short"></div>
-            <div class="page-logs-element-text-full" hidden></div>
         </div>
     </template>
 

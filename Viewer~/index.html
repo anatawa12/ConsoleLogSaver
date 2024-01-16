@@ -24,6 +24,9 @@
         background-color: #1E90FF;
         color: white;
     }
+    .page-header > button[data-active] {
+        background-color: #1e4fff;
+    }
     [hidden]{
         display:none !important; /* allow make flexbox hidden */
     }
@@ -74,8 +77,12 @@
         line-height: 1.2em;
         border-bottom: black 1px solid;
     }
+    .page-logs-list[data-collapsed] > .page-logs-element[data-collapsed] {
+        display: none;
+    }
     .page-logs-element > .page-logs-element-icon {
         background: url('info.svg');
+        flex-shrink: 0;
     }
     .page-logs-element[data-log-level="error"] > .page-logs-element-icon {
         background: url('error.svg');
@@ -88,12 +95,35 @@
         height: calc(2 * 1.2em);
         padding: 3px;
     }
-    .page-logs-element-text-short {
+    .page-logs-element-text-short-area {
+        position: relative;
         height: calc(2 * 1.2em);
-        white-space: pre;
         flex-grow: 1;
         padding: 3px;
         overflow: hidden;
+    }
+    .page-logs-element-text-short {
+        white-space: pre;
+    }
+    .page-logs-element-collapsed-count-area {
+        position: absolute;
+        top: 0;
+        right: 3px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .page-logs-element-collapsed-count {
+        background: white;
+        border-radius: calc(0.6em + 1px);
+        text-align: center;
+        padding: 1px 0.5em;
+        display: none;
+    }
+    .page-logs-list[data-collapsed] .page-logs-element-collapsed-count {
+        display: initial;
     }
     .page-logs-body {
         flex-shrink: 0;
@@ -108,6 +138,10 @@
     <div class="page-header">
         <button class="page-logs-button page-logs-back-button">Back</button>
         <button class="page-logs-button page-logs-show-project-info-button">Show Project Info</button>
+        <button class="page-logs-button page-logs-collapse-button">Collapse</button>
+        <button class="page-logs-button page-logs-info-button" data-active>Info</button>
+        <button class="page-logs-button page-logs-warning-button" data-active>Warning</button>
+        <button class="page-logs-button page-logs-error-button" data-active>Error</button>
     </div>
 
     <template id="page-log-template-element">
@@ -115,7 +149,13 @@
              data-full-text=""
              data-log-level="error">
             <span class="page-logs-element-icon"></span>
-            <div class="page-logs-element-text-short"></div>
+            <div class="page-logs-element-text-short-area">
+                <span class="page-logs-element-text-short">
+                </span>
+                <div class="page-logs-element-collapsed-count-area">
+                    <div class="page-logs-element-collapsed-count"></div>
+                </div>
+            </div>
         </div>
     </template>
 

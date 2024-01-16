@@ -41,6 +41,9 @@
             return;
         }
         window.currentLog = parsed;
+
+        const elementByText = {};
+
         for (const section of parsed.sections) {
             if (section.contentType !== "log-element") continue;
 
@@ -51,6 +54,17 @@
             const lines = section.content.split(/\r?\n/g);
             cloned.querySelector(".page-logs-element-text-short").textContent = lines.length === 1 ? lines[0] : `${lines[0]}\n${lines[1]}`;
             cloned.dataset.fullText = section.content;
+            // collapse
+            let originForText = elementByText[section.content]
+            if (originForText != null) {
+                cloned.dataset.collapsed = 'true';
+                const collasedCount = originForText.querySelector(".page-logs-element-collapsed-count");
+                collasedCount.textContent = parseInt(collasedCount.textContent) + 1;
+            } else {
+                originForText = elementByText[section.content] = cloned;
+                const collasedCount = originForText.querySelector(".page-logs-element-collapsed-count");
+                collasedCount.textContent = 1;
+            }
             children.push(cloned);
         }
         logList.replaceChildren(...children);
@@ -114,6 +128,7 @@
 
 (() => {
     const logBody = document.querySelector(".page-logs-body");
+    const logList = document.querySelector(".page-logs-list");
     window.onClickLogElement = (element) => {
         logBody.textContent = element.dataset.fullText;
     };
@@ -122,6 +137,18 @@
         e.stopPropagation();
 
         logBody.textContent = createProjectInfo(window.currentLog.headerValues);
+    })
+
+    const collapseButton = document.querySelector(".page-logs-collapse-button");
+    collapseButton.addEventListener('click', (e) => {
+        const active = collapseButton.dataset.active == 'true';
+        if (active) {
+            collapseButton.dataset.active = 'false';
+            delete logList.dataset.collapsed;
+        } else {
+            logList.dataset.collapsed = 'true'
+            collapseButton.dataset.active = 'true';
+        }
     })
 
     /// @param headers {[string, string][]}

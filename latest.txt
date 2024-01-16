@@ -1,2 +1,2 @@
-1.2.0
+1.2.1
 # second line or later may be used for other reason later

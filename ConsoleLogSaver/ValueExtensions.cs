@@ -10,5 +10,6 @@ static class ValueExtensions
 
     public static TypeMirror FindType(this VirtualMachine vm, string? assembly, string type) =>
         vm.GetTypes(type, false)
+            .Where(x => x.GetMethods().Any(m => m.Name != ""))
             .First(x => assembly == null || x.Assembly.GetName().Name == assembly);
 }

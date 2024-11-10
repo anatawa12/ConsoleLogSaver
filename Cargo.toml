@@ -4,3 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+lldb = { git = "https://github.com/endoli/lldb.rs.git", version = "0.0.11" }

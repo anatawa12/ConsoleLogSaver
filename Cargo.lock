@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
+name = "bytemuck"
+version = "1.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8334215b81e418a0a7bdb8ef0849474f40bb10c8b71f1c4ed315cff49f32494d"
+
+[[package]]
 name = "cc"
 version = "1.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -21,6 +27,7 @@ dependencies = [
 name = "console-log-saver"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "lldb",
 ]
 

@@ -1,9 +1,7 @@
 use bytemuck::{AnyBitPattern, NoUninit};
-use lldb::{
-    lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData,
-    SBDebugger, SBError, SBExpressionOptions, SBFrame, SBProcess, SBTarget, SBValue,
-};
+use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFrame, SBModule, SBProcess, SBSymbol, SBTarget, SBValue};
 use std::env::args;
+use std::marker::PhantomData;
 use std::process::exit;
 use std::time::Instant;
 
@@ -32,14 +30,23 @@ fn main() {
 
     let before_break = Instant::now();
 
-    let update = target
-        .find_functions("SceneTracker::Update", FunctionNameType::AUTO.bits())
-        .iter()
-        .next()
-        .unwrap()
-        .symbol()
-        .start_address()
-        .unwrap();
+    // I don't know wht but target.find_functions("SceneTracker::Update") don't work on windows
+    // so we use different method
+    let mut update = None;
+    'modules: for module in target.modules() {
+        if !module.filespec().filename().contains("Unity") {
+            continue;
+        }
+        for symbol in module.symbols() {
+            //println!("Processing symbol {:?}", symbol);
+            if symbol.name().contains("SceneTracker::Update(") {
+                update = Some(symbol.start_address().expect("no start address for SceneTracker::Update"));
+                break 'modules;
+            }
+        }
+    }
+
+    let update = update.expect("SceneTracker::Update symbol not found");
 
     let breakpoint = target.breakpoint_create_by_sbaddress(update);
     breakpoint.set_enabled(true);
@@ -381,5 +388,72 @@ unsafe trait SBValueExt {
 unsafe impl SBValueExt for SBValue {
     fn data_ref(&self) -> lldb::sys::SBValueRef {
         self.raw
+    }
+}
+
+unsafe trait SBModuleExt {
+    fn raw(&self) -> lldb::sys::SBModuleRef;
+
+    fn symbols(&self) -> ModuleSymbols {
+        ModuleSymbols {
+            module: self.raw(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+unsafe impl SBModuleExt for SBModule {
+    fn raw(&self) -> lldb::sys::SBModuleRef {
+        self.raw
+    }
+}
+
+struct ModuleSymbols<'a> {
+    module: lldb::sys::SBModuleRef,
+    _phantom: PhantomData<&'a SBModule>,
+}
+
+impl ModuleSymbols<'_> {
+    pub fn len(&self) -> usize {
+        unsafe { lldb::sys::SBModuleGetNumSymbols(self.module) }
+    }
+
+    pub fn get(&self, index: usize) -> Option<SBSymbol> {
+        if index < self.len() {
+            let symbol = unsafe { lldb::sys::SBModuleGetSymbolAtIndex(self.module, index) };
+            Some(SBSymbol { raw: symbol })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> IntoIterator for ModuleSymbols<'a> {
+    type Item = SBSymbol;
+    type IntoIter = ModuleSymbolsIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ModuleSymbolsIter {
+            module: self,
+            index: 0,
+        }
+    }
+}
+
+struct ModuleSymbolsIter<'a> {
+    module: ModuleSymbols<'a>,
+    index: usize,
+}
+
+impl Iterator for ModuleSymbolsIter<'_> {
+    type Item = SBSymbol;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.module.len() {
+            self.index += 1;
+            self.module.get(self.index - 1)
+        } else {
+            None
+        }
     }
 }

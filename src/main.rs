@@ -1,5 +1,5 @@
 use bytemuck::{AnyBitPattern, NoUninit};
-use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFrame, SBModule, SBProcess, SBSymbol, SBTarget, SBValue};
+use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFrame, SBListener, SBModule, SBProcess, SBSymbol, SBTarget, SBValue};
 use std::env::args;
 use std::marker::PhantomData;
 use std::process::exit;
@@ -70,7 +70,7 @@ fn main() {
         exit(1);
     }
 
-    let thread = process.threads().nth(0).unwrap();
+    let thread = process.selected_thread();
     let frame = thread.frames().nth(0).unwrap();
 
     let ctx = LLDBContext::new(&target, &process, &frame);

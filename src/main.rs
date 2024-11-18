@@ -33,16 +33,6 @@ fn main() {
     }
 
     let debugger = SBDebugger::create(false);
-    //debugger.enable_log("lldb", &[
-    //    "default",
-    //    //"api", 
-    //    //"break",
-    //    //"dyld",
-    //    //"jit",
-    //    //"event",
-    //    //"process",
-    //    "platform",
-    //]);
     debugger.set_asynchronous(false);
 
     // reading symbol table took some time, we want to skip
@@ -120,7 +110,14 @@ fn main() {
         println!("saver save address: {}", saver_save);
         println!("saver location address: {}", location);
 
-        ctx.eval(&format!("((void (*)())({saver_save}))()"));
+        //ctx.eval(&format!("((void (*)())({saver_save}))()"));
+        ctx.eval(&format!(r##"
+        #!mini-llvm-expr 1
+        const target_ptr ptr {saver_save}
+        define_function_type void void_no_arg
+        call _ void_no_arg target_ptr
+        ret_void
+        "##));
 
         let error = lldb::sys::SBProcessUnloadImage(process.raw, image_token);
         let error = SBError { raw: error };

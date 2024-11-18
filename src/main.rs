@@ -1,9 +1,12 @@
 use bytemuck::{AnyBitPattern, NoUninit};
-use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFrame, SBListener, SBModule, SBProcess, SBSymbol, SBTarget, SBValue};
+use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFileSpec, SBFrame, SBListener, SBModule, SBProcess, SBSymbol, SBTarget, SBValue, SymbolType};
 use std::env::args;
+use std::io::Write;
 use std::marker::PhantomData;
-use std::process::exit;
-use std::time::Instant;
+use std::os::unix::fs::PermissionsExt;
+use std::process::{exit, Stdio};
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 fn main() {
     let mut args = args();
@@ -16,7 +19,30 @@ fn main() {
 
     SBDebugger::initialize();
 
+    let mut named_temp = tempfile::Builder::new()
+        .prefix("cls-lldb-debugserver")
+        .suffix(".exe")
+        .tempfile()
+        .expect("failed to create temporary file");
+
+    named_temp.as_file_mut().set_permissions(std::fs::Permissions::from_mode(0o755)).expect("failed to set permissions");
+    named_temp.write_all(include_bytes!("/Users/anatawa12/CLionProjects/llvm-project/build/bin/debugserver")).expect("creating debugserver failed");
+
+    unsafe {
+        std::env::set_var("LLDB_DEBUGSERVER_PATH", named_temp.path());
+    }
+
     let debugger = SBDebugger::create(false);
+    //debugger.enable_log("lldb", &[
+    //    "default",
+    //    //"api", 
+    //    //"break",
+    //    //"dyld",
+    //    //"jit",
+    //    //"event",
+    //    //"process",
+    //    "platform",
+    //]);
     debugger.set_asynchronous(false);
 
     // reading symbol table took some time, we want to skip
@@ -26,7 +52,11 @@ fn main() {
     let attach_info = SBAttachInfo::new_with_pid(unity_pid);
 
     let process = target.attach(attach_info).unwrap();
-    println!("Attaching process took {:?}", attach.elapsed());
+    println!("Attaching process took {:?}, running?: {}", attach.elapsed(), process.is_running());
+    
+    println!("removing temp server");
+    drop(named_temp);
+    //sleep(Duration::from_secs(30));
 
     let before_break = Instant::now();
 
@@ -75,6 +105,28 @@ fn main() {
 
     let ctx = LLDBContext::new(&target, &process, &frame);
 
+    unsafe {
+        let path = "/Users/anatawa12/RustroverProjects/console-log-saver/target/debug/libcls_attach_lib.dylib";
+        let path_cstring = std::ffi::CString::new(path).unwrap();
+        let dylib = SBFileSpec { raw: lldb::sys::CreateSBFileSpec2(path_cstring.as_ptr()) };
+        let error = SBError::default();
+        let image_token = lldb::sys::SBProcessLoadImage(process.raw, dylib.raw, error.raw);
+        if (error.is_failure()) {
+            sleep(Duration::from_secs(1));
+            panic!("error: {}", error);
+        }
+        let saver_save = ctx.get_function_addr("CONSOLE_LOG_SAVER_SAVE");
+        let location = ctx.get_addr("CONSOLE_LOG_SAVER_SAVED_LOCATION");
+        println!("saver save address: {}", saver_save);
+        println!("saver location address: {}", location);
+
+        ctx.eval(&format!("((void (*)())({saver_save}))()"));
+
+        lldb::sys::SBProcessUnloadImage(process.raw, image_token);
+    }
+    // GetOrCreateClangModule
+
+    /*
     let define = Instant::now();
     ctx.eval(&format!(
         r#"
@@ -198,6 +250,7 @@ fn main() {
     }
 
     println!("all_total: {:?}", all_total.elapsed());
+     */
 
     process.detach().unwrap();
 
@@ -239,6 +292,18 @@ impl LLDBContext<'_> {
     fn get_function_addr(&self, name: &str) -> u64 {
         self.target
             .find_functions(name, FunctionNameType::AUTO.bits())
+            .iter()
+            .nth(0)
+            .unwrap()
+            .symbol()
+            .start_address()
+            .unwrap()
+            .load_address(self.target)
+    }
+
+    fn get_addr(&self, name: &str) -> u64 {
+        self.target
+            .find_symbols(name, SymbolType::Data)
             .iter()
             .nth(0)
             .unwrap()

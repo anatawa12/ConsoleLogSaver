@@ -122,7 +122,11 @@ fn main() {
 
         ctx.eval(&format!("((void (*)())({saver_save}))()"));
 
-        lldb::sys::SBProcessUnloadImage(process.raw, image_token);
+        let error = lldb::sys::SBProcessUnloadImage(process.raw, image_token);
+        let error = SBError { raw: error };
+        if error.is_failure() {
+            eprintln!("error: {}", error);
+        }
     }
     // GetOrCreateClangModule
 

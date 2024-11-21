@@ -11,7 +11,8 @@ structs!(MonoDomain MonoAssemblyName MonoAssembly MonoImage MonoClass MonoClassF
 
 type mono_bool = i32; // int32_t
 
-#[link(name = "monobdwgc-2.0", kind = "dylib")]
+#[cfg_attr(windows, link(name = "mono-2.0-bdwgc", kind = "raw-dylib"))]
+#[cfg_attr(unix, link(name = "monobdwgc-2.0", kind = "dylib"))]
 extern "C" {
     fn mono_domain_get() -> *mut MonoDomain;
     fn mono_assembly_name_new(name: *const c_char) -> *mut MonoAssemblyName;

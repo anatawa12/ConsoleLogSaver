@@ -1,5 +1,5 @@
 use bytemuck::{AnyBitPattern, NoUninit};
-use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFileSpec, SBFrame, SBListener, SBModule, SBProcess, SBSymbol, SBTarget, SBValue, SymbolType};
+use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, SBAddress, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFileSpec, SBFrame, SBListener, SBModule, SBModuleSpec, SBProcess, SBSection, SBSymbol, SBTarget, SBValue, SymbolType};
 use std::env::args;
 use std::io::Write;
 use std::marker::PhantomData;
@@ -403,6 +403,44 @@ unsafe trait SBValueExt {
 unsafe impl SBValueExt for SBValue {
     fn data_ref(&self) -> lldb::sys::SBValueRef {
         self.raw
+    }
+}
+
+unsafe trait SBAddressExt {
+    fn raw(&self) -> lldb::sys::SBAddressRef;
+
+    fn get_offset(&self) -> lldb_addr_t {
+        unsafe { lldb::sys::SBAddressGetOffset(self.raw()) }
+    }
+
+    fn get_section(&self) -> Option<SBSection> {
+        unsafe {
+            let section_ref = lldb::sys::SBAddressGetSection(self.raw());
+            if section_ref.is_null() {
+                None
+            } else {
+                Some(SBSection { raw: section_ref })
+            }
+        }
+    } 
+}
+
+unsafe impl SBAddressExt for SBAddress {
+    fn raw(&self) -> lldb::sys::SBAddressRef {
+        self.raw
+    }
+}
+
+unsafe trait SBModuleSpecExt : Sized {
+    fn from_raw(raw: lldb::sys::SBModuleSpecRef) -> Self;
+
+    fn new() -> Self {
+        Self::from_raw(unsafe { lldb::sys::CreateSBModuleSpec() })
+    }
+}
+unsafe impl SBModuleSpecExt for SBModuleSpec {
+    fn from_raw(raw: lldb::sys::SBModuleSpecRef) -> Self {
+        Self { raw }
     }
 }
 

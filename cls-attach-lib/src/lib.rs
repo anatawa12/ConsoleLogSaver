@@ -1,9 +1,12 @@
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
 use std::ffi::{c_char, c_int, c_void};
-use std::ptr::{null, null_mut};
+use std::ptr::{null_mut};
 
 macro_rules! structs {
     ($($name: ident)*) => {
-        $(#[repr(C)] struct $name;)*
+        $(#[repr(C)] struct $name {_dummy: u8})*
     };
 }
 

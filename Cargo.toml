@@ -11,5 +11,9 @@ tempfile = "3.14.0"
 
 [workspace]
 members = [
-    'cls-attach-lib'
+    'cls-attach-lib', 
+    'monobdwgc-2.0-stub',
 ]
+
+[patch.crates-io]
+lldb-sys = { git = "https://github.com/anatawa12/lldb-sys.rs", branch = "static-link" }

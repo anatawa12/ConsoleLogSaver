@@ -92,13 +92,16 @@ dependencies = [
 [[package]]
 name = "lldb-sys"
 version = "0.0.30"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b3b0f707f881bcd1ae0cd38e5b7e5d98459f0eea464db98f93b165fa68dcdec"
+source = "git+https://github.com/anatawa12/lldb-sys.rs?branch=static-link#0a25d03bc0ec19c9e5ef37fd3018c01924c6c319"
 dependencies = [
  "bitflags",
  "cc",
  "libc",
 ]
+
+[[package]]
+name = "monobdwgc20stub"
+version = "0.1.0"
 
 [[package]]
 name = "once_cell"

@@ -7,6 +7,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::process::{exit, Stdio};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use byteorder::{NativeEndian, ReadBytesExt};
 
 fn main() {
     let mut args = args();
@@ -112,6 +113,50 @@ fn main() {
         call _ void_no_arg target_ptr
         ret_void
         "##));
+
+        let mut pointer = 0usize;
+        process.read_memory(location, bytemuck::cast_slice_mut(std::slice::from_mut(&mut pointer))).expect("reading pointer");
+        let pointer = pointer as lldb_addr_t;
+
+        let mut data_size = 0u64;
+        process.read_memory(pointer, bytemuck::cast_slice_mut(std::slice::from_mut(&mut data_size))).expect("reading size memory");
+
+        if data_size >= usize::MAX as u64 {
+            panic!("size overflow");
+        }
+
+        // similar to vec![0u8; data_size as usize] but aligned to align_of::<u64>()
+        let mut buffer = unsafe { 
+            let size = data_size as usize;
+            let align = align_of::<u64>();
+            let layout = std::alloc::Layout::from_size_align_unchecked(size, align);
+            let mem = std::alloc::alloc(layout);
+            if mem.is_null() {
+                std::alloc::handle_alloc_error(layout);
+            }
+            // make sure initialized with 0 before creating vector
+            mem.write_bytes(0, size);
+
+            Vec::from_raw_parts(mem, size, size)
+        };
+
+        let mut buffer = vec![0u8; data_size as usize];
+        process.read_memory(pointer + 8, &mut buffer).expect("reading data memory");
+
+        let mut reader = std::io::Cursor::new(&buffer);
+        let version: i32 = reader.read_i32::<NativeEndian>().unwrap();
+        if version == 1 {
+            let length: i32 = reader.read_i32::<NativeEndian>().unwrap();
+            for i in 0..length {
+                let char_length: i32 = reader.read_i32::<NativeEndian>().unwrap();
+                let mut buffer = vec![0u16; char_length as usize];
+                reader.read_u16_into::<NativeEndian>(buffer.as_mut_slice()).unwrap();
+                let log_message = String::from_utf16(&buffer).unwrap();
+                println!("log message: of {i}\n{log_message}");
+            }
+        } else {
+            println!("version mismatch ({version})");
+        }
 
         process.unload_image(image_token).expect("unloading image");
     }

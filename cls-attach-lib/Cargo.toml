@@ -7,3 +7,4 @@ edition = "2021"
 crate-type = ['cdylib']
 
 [dependencies]
+bytemuck = "1.20.0"

@@ -32,6 +32,24 @@ extern "C" {
 
 #[no_mangle]
 static mut CONSOLE_LOG_SAVER_SAVED_LOCATION: *mut u8 = null_mut();
+/*
+// Current result format
+struct String {
+  i32 length;
+  u16 chars[length];
+}
+
+struct Entry {
+  String message;
+}
+
+struct Result {
+  u64 byte_length; // excluding this field
+  i32 version; // ensure data is not corrupt
+  i32 length;
+  Entry entries[length];
+}
+ */
 
 macro_rules! cs {
     ($string: literal) => {
@@ -42,6 +60,8 @@ macro_rules! cs {
 #[no_mangle]
 extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
     unsafe {
+        let mut result_data = Vec::<u8>::with_capacity(1024 * 4);
+
         let domain = mono_domain_get();
         let assembly_name = mono_assembly_name_new(cs!("UnityEditor"));
         let assembly = mono_assembly_loaded(assembly_name);
@@ -69,6 +89,11 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         // void *$message_obj;
         // int $line, $mode;
 
+        // array size will be set to this place later
+        result_data.extend_from_slice(&[0u8; 8]);
+        result_data.extend_from_slice(&1i32.to_ne_bytes());
+        result_data.extend_from_slice(&count.to_ne_bytes());
+
         for mut index in 0..count {
             let mut message_obj: *mut MonoString = null_mut();
             let mut line: i32 = 0;
@@ -82,25 +107,21 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
             mono_field_get_value(logentry, LogEntryClass_line, &mut line as *mut _ as *mut _);
             mono_field_get_value(logentry, LogEntryClass_mode, &mut mode as *mut _ as *mut _);
 
-            //$message_length[index] = $mono_string_length($message_obj);
-            //$message_chars[index]  = $mono_string_chars($message_obj);
+            let length = mono_string_length(message_obj);
+            let chars_ptr  = mono_string_chars(message_obj);
+            let chars_slice = std::slice::from_raw_parts(chars_ptr, length as usize);
+            result_data.extend_from_slice(&length.to_ne_bytes());
+            result_data.extend_from_slice(bytemuck::cast_slice(chars_slice));
         }
 
         mono_runtime_invoke(EndGettingEntries, null_mut(), null_mut(), null_mut());
 
-        /*
-        struct Result {
-            int32_t count;
-            int32_t *message_length;
-            char16_t **message_chars;
-        };
+        // set byte length 
+        let result_data_length = (result_data.len() - 8) as u64;
+        (&mut result_data[0..8]).copy_from_slice(&result_data_length.to_ne_bytes());
 
-        struct Result $result = {
-            .count = count,
-            .message_length = $message_length,
-            .message_chars  = $message_chars,
-        };
-         */
+        // Note: RustRover would report error for this line but it's false positive
+        CONSOLE_LOG_SAVER_SAVED_LOCATION = result_data.leak().as_mut_ptr();
     }
 }
 

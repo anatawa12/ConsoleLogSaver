@@ -161,6 +161,11 @@ fn main() {
         process.unload_image(image_token).expect("unloading image");
     }
 
+    // I don't know why but detaching with synchronous and no resume 
+    // would freeze target process on detach after loading image.
+    debugger.set_asynchronous(true);
+    process.continue_execution().unwrap();
+
     process.detach().unwrap();
 
     SBDebugger::terminate();

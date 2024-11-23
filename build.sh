@@ -139,6 +139,7 @@ if [ "$OS" = "macos" ] || [ "$OS" = "linux" ]; then
 fi
 
 export LLDB_SYS_CFLAGS='-DLLDB_API='
+export CLS_ATTACH_LIB_PATH
 
 echo "building main crate"
 cargo build $CARGO_PROFILE_ARG -p console-log-saver

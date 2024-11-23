@@ -54,6 +54,27 @@ fn main() {
         }
     }
 
+    let attach_lib_dylib = {
+        use std::os::unix::fs::PermissionsExt;
+
+        #[cfg(target_os = "windows")]
+        let suffix = ".exe";
+        #[cfg(target_os = "macos")]
+        let suffix = ".dylib";
+        #[cfg(target_os = "linux")]
+        let suffix = ".so";
+
+        let mut named_temp = tempfile::Builder::new()
+            .prefix("cls_attach_lib")
+            .suffix(suffix)
+            .tempfile()
+            .expect("failed to create temporary file");
+
+        named_temp.write_all(include_bytes!(env!("CLS_ATTACH_LIB_PATH"))).expect("creating cls attach library failed");
+
+        named_temp
+    };
+
     let debugger = SBDebugger::create(false);
     debugger.set_asynchronous(false);
 
@@ -114,7 +135,7 @@ fn main() {
     let ctx = LLDBContext::new(&target, &process, &frame);
 
     {
-        let path = "/Users/anatawa12/RustroverProjects/console-log-saver/target/debug/libcls_attach_lib.dylib";
+        let path = attach_lib_dylib.path().to_str().unwrap();
         let dylib = SBFileSpec::from_path(path);
         let image_token = process.load_image(&dylib).expect("loading image");
 

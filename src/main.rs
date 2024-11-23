@@ -3,7 +3,6 @@ use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, 
 use std::env::args;
 use std::io::Write;
 use std::marker::PhantomData;
-use std::os::unix::fs::PermissionsExt;
 use std::process::{exit, Stdio};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -25,6 +24,8 @@ fn main() {
 
     #[cfg(all(unix, not(feature = "external_debug_server")))]
     let _named_temp = {
+        use std::os::unix::fs::PermissionsExt;
+
         let mut named_temp = tempfile::Builder::new()
             .prefix("cls-lldb-debugserver")
             .suffix(".exe")

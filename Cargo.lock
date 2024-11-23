@@ -92,7 +92,7 @@ dependencies = [
 [[package]]
 name = "lldb-sys"
 version = "0.0.30"
-source = "git+https://github.com/anatawa12/lldb-sys.rs?branch=static-link#0a25d03bc0ec19c9e5ef37fd3018c01924c6c319"
+source = "git+https://github.com/anatawa12/lldb-sys.rs?branch=static-link#d5c37927fcbe36259faf8edd9cfa71bc2dc292c1"
 dependencies = [
  "bitflags",
  "cc",

@@ -19,7 +19,7 @@ fn main() {
 
     SBDebugger::initialize();
 
-    #[cfg(all(not(unix), not(feature = "external_debug_server")))]
+    #[cfg(all(not(unix), feature = "external_debug_server"))]
     compile_error!("external_debug_server feature is only for unix platform");
 
     #[cfg(all(unix, not(feature = "external_debug_server")))]

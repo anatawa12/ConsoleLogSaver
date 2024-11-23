@@ -10,6 +10,9 @@ fn match_libname(name: &str) -> Option<String> {
     if name.starts_with("lldb") && name.ends_with(".lib") {
         return Some(name[..name.len() - 4].into());
     }
+    if name.starts_with("liblldb") && name.ends_with(".lib") {
+        return Some(name[..name.len() - 4].into());
+    }
     if name.starts_with("LLVM") && name.ends_with(".lib") {
         return Some(name[..name.len() - 4].into());
     }

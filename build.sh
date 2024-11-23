@@ -138,7 +138,7 @@ if [ "$OS" = "macos" ] || [ "$OS" = "linux" ]; then
   export LLDB_BUNDLE_DEBUGSERVER_PATH="$LLDB_BUILD_DIR/bin/debugserver"
 fi
 
-export LLVM_SYS_CFLAGS='-DLLDB_API='
+export LLDB_SYS_CFLAGS='-DLLDB_API='
 
 echo "building main crate"
 cargo build $CARGO_PROFILE_ARG -p console-log-saver

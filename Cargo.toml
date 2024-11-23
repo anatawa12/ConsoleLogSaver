@@ -17,3 +17,6 @@ members = [
 
 [patch.crates-io]
 lldb-sys = { git = "https://github.com/anatawa12/lldb-sys.rs", branch = "static-link" }
+
+[features]
+external_debug_server = []

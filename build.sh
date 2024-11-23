@@ -134,5 +134,9 @@ if [ -z "${LLDB_LIB_DIR:-}" ]; then
   export LLDB_LIB_DIR
 fi
 
+if [ "$OS" = "macos" ] || [ "$OS" = "linux" ]; then
+  export LLDB_BUNDLE_DEBUGSERVER_PATH="$LLDB_BUILD_DIR/bin/debugserver"
+fi
+
 echo "building main crate"
 cargo build $CARGO_PROFILE_ARG -p console-log-saver

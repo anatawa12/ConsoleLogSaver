@@ -20,17 +20,37 @@ fn main() {
 
     SBDebugger::initialize();
 
-    let mut named_temp = tempfile::Builder::new()
-        .prefix("cls-lldb-debugserver")
-        .suffix(".exe")
-        .tempfile()
-        .expect("failed to create temporary file");
+    #[cfg(all(not(unix), not(feature = "external_debug_server")))]
+    compile_error!("external_debug_server feature is only for unix platform");
 
-    named_temp.as_file_mut().set_permissions(std::fs::Permissions::from_mode(0o755)).expect("failed to set permissions");
-    named_temp.write_all(include_bytes!("/Users/anatawa12/CLionProjects/llvm-project/build/bin/debugserver")).expect("creating debugserver failed");
+    #[cfg(all(unix, not(feature = "external_debug_server")))]
+    let _named_temp = {
+        let mut named_temp = tempfile::Builder::new()
+            .prefix("cls-lldb-debugserver")
+            .suffix(".exe")
+            .tempfile()
+            .expect("failed to create temporary file");
 
-    unsafe {
-        std::env::set_var("LLDB_DEBUGSERVER_PATH", named_temp.path());
+        named_temp.as_file_mut().set_permissions(std::fs::Permissions::from_mode(0o755)).expect("failed to set permissions");
+        named_temp.write_all(include_bytes!(env!("LLDB_BUNDLE_DEBUGSERVER_PATH"))).expect("creating debugserver failed");
+
+        unsafe {
+            std::env::set_var("LLDB_DEBUGSERVER_PATH", named_temp.path());
+        }
+
+        named_temp
+    };
+
+    #[cfg(all(unix, feature = "external_debug_server"))]
+    {
+        let debugserver = env!("LLDB_REFERENCE_DEBUGSERVER_PATH");
+        if let Some(relative_path) = debugserver.strip_prefix("@executable/") {
+            let mut executable_path = std::env::current_exe().expect("Failed to get current executable path");
+            executable_path.push(relative_path);
+            std::env::set_var("LLDB_DEBUGSERVER_PATH", executable_path);
+        } else {
+            std::env::set_var("LLDB_DEBUGSERVER_PATH", debugserver);
+        }
     }
 
     let debugger = SBDebugger::create(false);
@@ -44,10 +64,6 @@ fn main() {
 
     let process = target.attach(attach_info).unwrap();
     println!("Attaching process took {:?}, running?: {}", attach.elapsed(), process.is_running());
-    
-    println!("removing temp server");
-    drop(named_temp);
-    //sleep(Duration::from_secs(30));
 
     let before_break = Instant::now();
 

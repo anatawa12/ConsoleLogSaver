@@ -141,21 +141,6 @@ fn main() {
             panic!("size overflow");
         }
 
-        // similar to vec![0u8; data_size as usize] but aligned to align_of::<u64>()
-        let mut buffer = unsafe { 
-            let size = data_size as usize;
-            let align = align_of::<u64>();
-            let layout = std::alloc::Layout::from_size_align_unchecked(size, align);
-            let mem = std::alloc::alloc(layout);
-            if mem.is_null() {
-                std::alloc::handle_alloc_error(layout);
-            }
-            // make sure initialized with 0 before creating vector
-            mem.write_bytes(0, size);
-
-            Vec::from_raw_parts(mem, size, size)
-        };
-
         let mut buffer = vec![0u8; data_size as usize];
         process.read_memory(pointer + 8, &mut buffer).expect("reading data memory");
 

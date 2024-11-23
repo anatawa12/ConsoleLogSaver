@@ -55,8 +55,6 @@ fn main() {
     }
 
     let attach_lib_dylib = {
-        use std::os::unix::fs::PermissionsExt;
-
         #[cfg(target_os = "windows")]
         let suffix = ".exe";
         #[cfg(target_os = "macos")]

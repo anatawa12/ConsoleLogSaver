@@ -139,8 +139,25 @@ fn main() {
         let dylib = SBFileSpec::from_path(path);
         let image_token = process.load_image(&dylib).expect("loading image");
 
-        let saver_save = ctx.get_function_addr("CONSOLE_LOG_SAVER_SAVE");
-        let location = ctx.get_addr("CONSOLE_LOG_SAVER_SAVED_LOCATION");
+        let dylib = target.find_module(&dylib).expect("loaded dylib not found");
+
+        let saver_save = dylib.find_functions("CONSOLE_LOG_SAVER_SAVE", FunctionNameType::AUTO.bits())
+            .iter()
+            .nth(0)
+            .unwrap()
+            .symbol()
+            .start_address()
+            .unwrap()
+            .load_address(&target);
+        let location = dylib.find_symbols("CONSOLE_LOG_SAVER_SAVED_LOCATION", SymbolType::Data)
+            .iter()
+            .nth(0)
+            .unwrap()
+            .symbol()
+            .start_address()
+            .unwrap()
+            .load_address(&target);
+
         println!("saver save address: {}", saver_save);
         println!("saver location address: {}", location);
 
@@ -179,6 +196,7 @@ fn main() {
             }
         } else {
             println!("version mismatch ({version})");
+            std::fs::write("received.bin", buffer).ok();
         }
 
         process.unload_image(image_token).expect("unloading image");

@@ -72,6 +72,7 @@ fn main() {
 
         named_temp
     };
+    let attach_lib_dylib_path = attach_lib_dylib.into_temp_path();
 
     let debugger = SBDebugger::create(false);
     debugger.set_asynchronous(false);
@@ -133,10 +134,11 @@ fn main() {
     let ctx = LLDBContext::new(&target, &process, &frame);
 
     {
-        let path = attach_lib_dylib.path().to_str().unwrap();
+        let path = attach_lib_dylib_path.to_str().unwrap();
         let dylib = SBFileSpec::from_path(path);
         let image_token = process.load_image(&dylib).expect("loading image");
 
+        // not working on posix (at least macos)
         let dylib = target.find_module(&dylib).expect("loaded dylib not found");
 
         let saver_save = dylib.find_functions("CONSOLE_LOG_SAVER_SAVE", FunctionNameType::AUTO.bits())

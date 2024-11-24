@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 LLVM_COMMIT="9152efbb912e341e112f369f5abedfa49e695fac"
 LLVM_ARCHIVE_URL="https://github.com/anatawa12/llvm-project/archive/${LLVM_COMMIT}.tar.gz"
 
@@ -60,7 +62,7 @@ case $(uname) in
     exit 1;
 esac
 
-if [ ! -d "$LLVM_BUILD_DIR" ]; then
+if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ]; then
   cmake \
     -S "$LLVM_SRC_DIR/llvm" \
     -B "$LLVM_BUILD_DIR" \

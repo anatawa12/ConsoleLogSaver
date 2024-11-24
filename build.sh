@@ -6,7 +6,7 @@ PROJECT_DIR="$(pwd)"
 
 # input variables
 BUILD_RELEASE=false
-LLDB_BUILD_DIR=
+LLDB_BUILD_DIR="$PROJECT_DIR/llvm/build"
 
 while [ "$#" != 0 ]; do
     case "$1" in
@@ -27,6 +27,11 @@ done
 
 if [ -z "$LLDB_BUILD_DIR" ]; then
   echo "-l or --lldb-build-dir not specified" >&2
+  exit 1
+fi
+
+if [ ! -d "$LLDB_BUILD_DIR" ]; then
+  echo "LLDB_BUILD_DIR not found." >&2
   exit 1
 fi
 

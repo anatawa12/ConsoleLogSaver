@@ -94,6 +94,7 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         // int $line, $mode;
 
         // array size will be set to this place later
+        result_data.extend_from_slice(&[0u8; 8]); // capacity space
         result_data.extend_from_slice(&[0u8; 8]);
         result_data.extend_from_slice(&1i32.to_ne_bytes());
         result_data.extend_from_slice(&count.to_ne_bytes());
@@ -121,11 +122,32 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         mono_runtime_invoke(EndGettingEntries, null_mut(), null_mut(), null_mut());
 
         // set byte length 
-        let result_data_length = (result_data.len() - 8) as u64;
-        (&mut result_data[0..8]).copy_from_slice(&result_data_length.to_ne_bytes());
+        let capacity = result_data.capacity();
+        let len = result_data.len();
+        let leaked = result_data.leak();
+        let result_data_length = (len - 8) as u64;
+        leaked[0..][..8].copy_from_slice(&(capacity as u64).to_ne_bytes());
+        leaked[8..][..8].copy_from_slice(&result_data_length.to_ne_bytes());
 
         // Note: RustRover would report error for this line but it's false positive
-        CONSOLE_LOG_SAVER_SAVED_LOCATION = result_data.leak().as_mut_ptr();
+        CONSOLE_LOG_SAVER_SAVED_LOCATION = leaked.as_mut_ptr().add(8);
+    }
+}
+
+#[no_mangle]
+extern "C" fn CONSOLE_LOG_SAVER_FREE_MEM() {
+    let location = unsafe { CONSOLE_LOG_SAVER_SAVED_LOCATION };
+    if !location.is_null() {
+        let vec_start = unsafe { location.sub(8) };
+        let capacity_len_buffer = unsafe { std::slice::from_raw_parts(vec_start, 16) };
+        let mut capacity_len = [0u64; 2];
+        bytemuck::cast_slice_mut(&mut capacity_len).copy_from_slice(capacity_len_buffer);
+
+        let capacity = capacity_len[0] as usize;
+        let len = capacity_len[1] as usize;
+
+        let vec = unsafe { Vec::from_raw_parts(vec_start, len, capacity) };
+        drop(vec); // deallocate
     }
 }
 

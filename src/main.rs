@@ -136,6 +136,7 @@ fn main() {
 
     struct LoadImageResult<F> {
         saver_save: lldb_addr_t,
+        free_mem: lldb_addr_t,
         location: lldb_addr_t,
         unload: F,
     }
@@ -160,6 +161,14 @@ fn main() {
             .start_address()
             .unwrap()
             .load_address(&target);
+        let free_mem = dylib.find_functions("CONSOLE_LOG_SAVER_FREE_MEM", FunctionNameType::AUTO.bits())
+            .iter()
+            .nth(0)
+            .unwrap()
+            .symbol()
+            .start_address()
+            .unwrap()
+            .load_address(&target);
         let location = dylib.find_symbols("CONSOLE_LOG_SAVER_SAVED_LOCATION", SymbolType::Data)
             .iter()
             .nth(0)
@@ -172,6 +181,7 @@ fn main() {
         let process = process.clone();
         Ok(LoadImageResult {
             saver_save,
+            free_mem,
             location,
             unload: move || {
                 process.unload_image(image_token).expect("unloading image");
@@ -190,17 +200,19 @@ fn main() {
         C-like expression:
         struct InOut {
           // input data
-          const char *load_path, // 0
+          const char *load_path,
           // constants. For easier writing code, we pass constants with inoput struct
-          const char *saver_save_name, // 1
-          const char *location_name, // 2
+          const char *saver_save_name,
+          const char *free_mem_name,
+          const char *location_name, 
           // error data.
-          const char *error, // 3
-          size_t error_len, // 4
+          const char *error,
+          size_t error_len,
           // success data
-          void *handle, // 5
-          void *saver_save, // 6
-          void *location, // 7
+          void *handle,
+          void *saver_save,
+          void *free_mem_save,
+          void *location,
         }
 
         #define RTLD_LAZY 1
@@ -212,6 +224,10 @@ fn main() {
         const char *saver_save_name = input->saver_save_name;
         input.saver_save = void *saver_save = dlsym(handle, saver_save_name);
         if (saver_save == NULL) goto error;
+
+        const char *free_mem_name = input->free_mem_name;
+        input.free_mem = void *free_mem = dlsym(handle, free_mem_name);
+        if (free_mem == NULL) goto error;
 
         const char *location_name = input->location_name;
         input.location   = void *location   = dlsym(handle, location_name);
@@ -229,15 +245,18 @@ fn main() {
 
         let load_path_idx: usize = 0;
         let saver_save_name_idx: usize = 1;
-        let location_name_idx: usize = 2;
-        let error_idx: usize = 3;
-        let error_len_idx: usize = 4;
-        let handle_idx: usize = 5;
-        let saver_save_idx: usize = 6;
-        let location_idx: usize = 7;
-        const INOUT_ELEMENT_COUNT: usize = 8;
+        let free_mem_name_idx: usize = 2;
+        let location_name_idx: usize = 3;
+        let error_idx: usize = 4;
+        let error_len_idx: usize = 5;
+        let handle_idx: usize = 6;
+        let saver_save_idx: usize = 7;
+        let free_mem_idx: usize = 8;
+        let location_idx: usize = 9;
+        const INOUT_ELEMENT_COUNT: usize = 10;
 
         let saver_save_name = "CONSOLE_LOG_SAVER_SAVE";
+        let free_mem_name = "CONSOLE_LOG_SAVER_FREE_MEM";
         let location_name = "CONSOLE_LOG_SAVER_SAVED_LOCATION";
 
         const STRUCT_DATA_SIZE: usize = size_of::<usize>() * INOUT_ELEMENT_COUNT;
@@ -245,6 +264,7 @@ fn main() {
         let mut buffer = Vec::with_capacity(STRUCT_DATA_SIZE
             + (load_path.as_os_str().len() + 1)
             + (saver_save_name.len() + 1)
+            + (free_mem_name.len() + 1)
             + (location_name.len() + 1));
         buffer.extend_from_slice(&[0u8; STRUCT_DATA_SIZE]);
         let mut buffer_writer = std::io::Cursor::new(&mut buffer);
@@ -259,6 +279,7 @@ fn main() {
         buffer_writer.set_position(STRUCT_DATA_SIZE as u64);
         let load_path_offset = write_get_ptr(&mut buffer_writer, &load_path.as_os_str().as_bytes());
         let saver_save_name_offset = write_get_ptr(&mut buffer_writer, &saver_save_name.as_bytes());
+        let free_mem_name_offset = write_get_ptr(&mut buffer_writer, &free_mem_name.as_bytes());
         let location_name_offset = write_get_ptr(&mut buffer_writer, &location_name.as_bytes());
 
         let buffer_location = process.allocate_memory(buffer.len(), Permissions::READABLE | Permissions::WRITABLE).expect("allocating memory");
@@ -270,17 +291,18 @@ fn main() {
 
         set_usize(&mut buffer, load_path_idx, (buffer_location + load_path_offset) as usize);
         set_usize(&mut buffer, saver_save_name_idx, (buffer_location + saver_save_name_offset) as usize);
+        set_usize(&mut buffer, free_mem_name_idx, (buffer_location + free_mem_name_offset) as usize);
         set_usize(&mut buffer, location_name_idx, (buffer_location + location_name_offset) as usize);
 
         process.write_memory(buffer_location, &buffer).expect("writing memory");
         drop(buffer);
 
-        let error_block = 3;
-        let ok_block = 7;
+        let error_block = 4;
+        let ok_block = 8;
 
         let expression = format!(r#"
-#!mini-llvm-expr 8
-define_struct InOut ptr ptr ptr ptr iptr ptr ptr ptr
+#!mini-llvm-expr 9
+define_struct InOut ptr ptr ptr ptr ptr iptr ptr ptr ptr ptr
 ; functions
 ; declare ptr @dlopen(ptr, i32)
 define_function_type ptr dlopen ptr i32
@@ -306,11 +328,13 @@ const RTLD_LAZY i32 1
 const iptr_0 iptr 0
 const load_path_idx i32 {load_path_idx}
 const saver_save_name_idx i32 {saver_save_name_idx}
+const free_mem_name_idx i32 {free_mem_name_idx}
 const location_name_idx i32 {location_name_idx}
 const error_idx i32 {error_idx}
 const error_len_idx i32 {error_len_idx}
 const handle_idx i32 {handle_idx}
 const saver_save_idx i32 {saver_save_idx}
+const free_mem_idx i32 {free_mem_idx}
 const location_idx i32 {location_idx}
 const input ptr {buffer_location}
 
@@ -335,8 +359,17 @@ begin_block 1
   store saver_save saver_save_ptr
   icmp saver_save_is_null eq saver_save null
   cond_br saver_save_is_null {error_block} 2
-  
+
 begin_block 2
+  getelementptr free_mem_name_ptr InOut input iptr_0 free_mem_name_idx
+  load free_mem_name ptr free_mem_name_ptr
+  call free_mem dlsym dlsym handle free_mem_name
+  getelementptr free_mem_ptr InOut input iptr_0 free_mem_idx
+  store free_mem free_mem_ptr
+  icmp free_mem_is_null eq free_mem null
+  cond_br free_mem_is_null {error_block} 3
+
+begin_block 3
   getelementptr location_name_ptr InOut input iptr_0 location_name_idx
   load location_name ptr location_name_ptr
   call location dlsym dlsym handle location_name
@@ -345,27 +378,27 @@ begin_block 2
   icmp location_is_null eq location null
   cond_br location_is_null {error_block} {ok_block}
 
-begin_block 3 # error_block
+begin_block 4 # error_block
   call error dlerror dlerror
   getelementptr error_ptr InOut input iptr_0 error_idx
   store error error_ptr
   icmp error_is_null eq error null
-  cond_br error_is_null 5 4
+  cond_br error_is_null 6 5
 
-begin_block 4
+begin_block 5
   call error_len strlen strlen error
   getelementptr error_len_ptr InOut input iptr_0 error_len_idx
   store error_len error_len_ptr
-  br 5
+  br 6
 
-begin_block 5
-  icmp handle_is_null_2 eq handle null
-  cond_br handle_is_null_2 7 6
 begin_block 6
+  icmp handle_is_null_2 eq handle null
+  cond_br handle_is_null_2 8 7
+begin_block 7
   call _ dlclose dlclose handle
-  br 7
+  br 8
 
-begin_block 7 # ok_block
+begin_block 8 # ok_block
   ret_void
 "#);
 
@@ -387,6 +420,7 @@ begin_block 7 # ok_block
 
         let handle = read_buffer[handle_idx];
         let saver_save = read_buffer[saver_save_idx] as lldb_addr_t;
+        let free_mem = read_buffer[free_mem_idx] as lldb_addr_t;
         let location = read_buffer[location_idx] as lldb_addr_t;
         let error = read_buffer[error_idx];
 
@@ -418,6 +452,7 @@ ret_void"#), &options);
 
         Ok(LoadImageResult {
             saver_save,
+            free_mem,
             location,
             unload,
         })
@@ -427,6 +462,7 @@ ret_void"#), &options);
         let load_image = load_image(&process, attach_lib_dylib_path.as_ref()).expect("load_image");
 
         let saver_save = load_image.saver_save;
+        let free_mem = load_image.free_mem;
         let location = load_image.location;
 
         println!("saver save address: {}", saver_save);
@@ -453,6 +489,14 @@ ret_void"#), &options);
 
         let mut buffer = vec![0u8; data_size as usize];
         process.read_memory(pointer + 8, &mut buffer).expect("reading data memory");
+
+        ctx.eval(&format!(r##"
+        #!mini-llvm-expr 1
+        const target_ptr ptr {free_mem}
+        define_function_type void void_no_arg
+        call _ void_no_arg target_ptr
+        ret_void
+        "##));
 
         let mut reader = std::io::Cursor::new(&buffer);
         let version: i32 = reader.read_i32::<NativeEndian>().unwrap();

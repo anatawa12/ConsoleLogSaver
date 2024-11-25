@@ -292,6 +292,8 @@ begin_block 8 # ok_block
         .read_memory(buffer_location, bytemuck::cast_slice_mut(&mut read_buffer))
         .expect("reading memory");
 
+    unsafe { process.deallocate_memory(buffer_location) }.expect("deallocating memory");
+
     let handle = read_buffer[handle_idx];
     let saver_save = read_buffer[saver_save_idx] as lldb_addr_t;
     let free_mem = read_buffer[free_mem_idx] as lldb_addr_t;

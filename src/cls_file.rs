@@ -51,7 +51,7 @@ pub struct ClsHeadingBuilder {
 }
 
 impl ClsHeadingBuilder {
-    pub fn add_header(mut self, name: &str, value: &str) -> ClsHeadingBuilder {
+    pub fn add_header(&mut self, name: &str, value: &str) -> &mut Self {
         self.builder.add_header(name, value);
         self
     }
@@ -72,7 +72,7 @@ pub struct ClsBodyBuilder {
 }
 
 impl ClsBodyBuilder {
-    pub fn add_header(mut self, name: &str, value: &str) -> ClsBodyBuilder {
+    pub fn add_header(&mut self, name: &str, value: &str) -> &mut Self {
         if name.eq_ignore_ascii_case("content") {
             panic!("reserved header name: content")
         }
@@ -83,7 +83,7 @@ impl ClsBodyBuilder {
         self
     }
 
-    pub fn add_content(mut self, content_type: &str, content: &str) -> ClsBodyBuilder {
+    pub fn add_content(&mut self, content_type: &str, content: &str) -> &mut Self {
         self.builder.add_header("Content", content_type);
         self.builder.end_of_heading();
         self.builder.building.push_str(content);

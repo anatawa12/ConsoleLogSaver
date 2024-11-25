@@ -587,7 +587,7 @@ ret_void"#
         let version: i32 = reader.read_i32();
         if version == 1 {
             let mut cls_file_builder = ClsFileBuilder::new();
-            cls_file_builder = cls_file_builder.add_header(
+            cls_file_builder.add_header(
                 "Vendor",
                 concat!(
                     "ConsoleLogSaver/",
@@ -597,13 +597,13 @@ ret_void"#
             );
 
             let unity_version = reader.read_string();
-            cls_file_builder = cls_file_builder.add_header("Unity-Version", &unity_version);
+            cls_file_builder.add_header("Unity-Version", &unity_version);
 
             let os_description = reader.read_string();
-            cls_file_builder = cls_file_builder.add_header("Editor-Platform", &os_description);
+            cls_file_builder.add_header("Editor-Platform", &os_description);
 
             let build_target = reader.read_string();
-            cls_file_builder = cls_file_builder.add_header("Build-Target", &build_target);
+            cls_file_builder.add_header("Build-Target", &build_target);
 
             let current_directory = reader.read_string();
             eprintln!("current_directory: {current_directory}");
@@ -614,9 +614,9 @@ ret_void"#
             for _ in 0..length {
                 let log_message = reader.read_string();
                 let mode = reader.read_i32();
-                cls_file_builder = cls_file_builder.add_header("Mode", &format!("{mode}")); // TODO: transfer to name
-                cls_file_builder = cls_file_builder.add_header("Mode-Raw", &format!("{mode:08x}"));
-                cls_file_builder = cls_file_builder.add_content("log-element", &log_message);
+                cls_file_builder.add_header("Mode", &format!("{mode}")); // TODO: transfer to name
+                cls_file_builder.add_header("Mode-Raw", &format!("{mode:08x}"));
+                cls_file_builder.add_content("log-element", &log_message);
             }
 
             print!("{}", cls_file_builder.build());

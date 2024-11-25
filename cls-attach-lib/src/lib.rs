@@ -193,6 +193,7 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
             let chars_ptr = mono_string_chars(message_obj);
             let chars_slice = std::slice::from_raw_parts(chars_ptr, length as usize);
             data_builder.write_string(chars_slice);
+            data_builder.write_i32(mode);
         }
 
         mono_runtime_invoke(EndGettingEntries, null_mut(), null_mut(), null_mut());

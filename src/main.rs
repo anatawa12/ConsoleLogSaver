@@ -598,6 +598,9 @@ ret_void"#
             let length: i32 = reader.read_i32();
             for _ in 0..length {
                 let log_message = reader.read_string();
+                let mode = reader.read_i32();
+                cls_file_builder = cls_file_builder.add_header("Mode", &format!("{mode}")); // TODO: transfer to name
+                cls_file_builder = cls_file_builder.add_header("Mode-Raw", &format!("{mode:08x}"));
                 cls_file_builder = cls_file_builder.add_content("log-element", &log_message);
             }
         } else {

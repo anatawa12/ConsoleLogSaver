@@ -32,7 +32,7 @@ impl LoadImageResult {
     }
 }
 
-fn load_image(
+pub fn load_image(
     process: &SBProcess,
     load_path: &std::path::Path,
 ) -> Result<LoadImageResult, Infallible> {

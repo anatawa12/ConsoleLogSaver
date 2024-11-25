@@ -7,6 +7,8 @@ edition = "2021"
 bytemuck = "1.19.0"
 byteorder = "1.5.0"
 lldb = { git = "https://github.com/endoli/lldb.rs.git", version = "0.0.11" }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
 tempfile = "3.14.0"
 uuid = { version = "1.11.0", features = ["v4"] }
 

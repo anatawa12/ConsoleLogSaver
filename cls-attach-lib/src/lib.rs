@@ -238,7 +238,12 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         let build_target_str = mono_object_to_string(build_target, null_mut());
         data_builder.write_string(mono_string_to_slice(build_target_str));
 
-        let current_directory = mono_runtime_invoke(Directory_GetCurrentDirectory, null_mut(), null_mut(), null_mut());
+        let current_directory = mono_runtime_invoke(
+            Directory_GetCurrentDirectory,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
         data_builder.write_string(mono_string_to_slice(current_directory as *mut _));
 
         // log info

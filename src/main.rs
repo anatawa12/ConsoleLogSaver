@@ -1,6 +1,6 @@
 mod cls_file;
 
-use crate::cls_file::ClsFileBuilder;
+use crate::cls_file::{ClsFileBuilder, ClsHeadingBuilder};
 use bytemuck::{AnyBitPattern, NoUninit};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use lldb::{
@@ -11,12 +11,14 @@ use lldb::{
 };
 use std::env::args;
 use std::ffi::CStr;
+use std::fmt::format;
 use std::io::Write;
 use std::marker::PhantomData;
 use std::process::{exit, Stdio};
 use std::ptr::read;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use serde::Deserialize;
 
 fn main() {
     let mut args = args();
@@ -608,6 +610,9 @@ ret_void"#
             let current_directory = reader.read_string();
             eprintln!("current_directory: {current_directory}");
 
+            append_upm(&mut cls_file_builder, &current_directory);
+            append_vpm(&mut cls_file_builder, &current_directory);
+
             let mut cls_file_builder = cls_file_builder.begin_body();
 
             let length: i32 = reader.read_i32();
@@ -659,6 +664,54 @@ impl TransferDataReader {
             .read_u16_into::<NativeEndian>(buffer.as_mut_slice())
             .unwrap();
         String::from_utf16(&buffer).expect("bad utf16 message")
+    }
+}
+
+fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str) {
+    #[derive(Deserialize)]
+    struct PackageLock {
+        dependencies: std::collections::BTreeMap<String, UpmLockedDependency>,
+    }
+    #[derive(Deserialize)]
+    struct UpmLockedDependency {
+        version: Option<String>,
+    }
+
+    let package_lock = std::path::Path::new(cwd).join("Packages/packages-lock.json");
+    let Ok(package_lock) = std::fs::read(&package_lock) else {
+        return;
+    };
+    let Ok(package_lock) = serde_json::from_slice::<PackageLock>(&package_lock) else{
+        return;
+    };
+    for (dependency, lock_info) in package_lock.dependencies {
+        if let Some(version) = lock_info.version {
+            builder.add_header("Upm-Dependency", &format!("{dependency}@{version}"));
+        }
+    }
+}
+
+fn append_vpm(builder: &mut ClsHeadingBuilder, cwd: &str) {
+    #[derive(Deserialize)]
+    struct PackageLock {
+        locked: std::collections::BTreeMap<String, VpmLockedDependency>,
+    }
+    #[derive(Deserialize)]
+    struct VpmLockedDependency {
+        version: Option<String>,
+    }
+
+    let package_lock = std::path::Path::new(cwd).join("Packages/vpm-manifest.json");
+    let Ok(package_lock) = std::fs::read(&package_lock) else {
+        return;
+    };
+    let Ok(package_lock) = serde_json::from_slice::<PackageLock>(&package_lock) else{
+        return;
+    };
+    for (dependency, lock_info) in package_lock.locked {
+        if let Some(version) = lock_info.version {
+            builder.add_header("Vpm-Dependency", &format!("{dependency}@{version}"));
+        }
     }
 }
 

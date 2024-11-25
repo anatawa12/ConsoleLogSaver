@@ -1,5 +1,14 @@
+mod cls_file;
+
+use crate::cls_file::ClsFileBuilder;
 use bytemuck::{AnyBitPattern, NoUninit};
-use lldb::{lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, Permissions, SBAddress, SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFileSpec, SBFrame, SBListener, SBModule, SBModuleSpec, SBProcess, SBSection, SBSymbol, SBTarget, SBValue, SymbolType};
+use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
+use lldb::{
+    lldb_addr_t, lldb_offset_t, lldb_pid_t, ByteOrder, FunctionNameType, Permissions, SBAddress,
+    SBAttachInfo, SBData, SBDebugger, SBError, SBExpressionOptions, SBFileSpec, SBFrame,
+    SBListener, SBModule, SBModuleSpec, SBProcess, SBSection, SBSymbol, SBTarget, SBValue,
+    SymbolType,
+};
 use std::env::args;
 use std::ffi::CStr;
 use std::io::Write;
@@ -7,7 +16,6 @@ use std::marker::PhantomData;
 use std::process::{exit, Stdio};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 
 fn main() {
     let mut args = args();
@@ -33,8 +41,13 @@ fn main() {
             .tempfile()
             .expect("failed to create temporary file");
 
-        named_temp.as_file_mut().set_permissions(std::fs::Permissions::from_mode(0o755)).expect("failed to set permissions");
-        named_temp.write_all(include_bytes!(env!("LLDB_BUNDLE_DEBUGSERVER_PATH"))).expect("creating debugserver failed");
+        named_temp
+            .as_file_mut()
+            .set_permissions(std::fs::Permissions::from_mode(0o755))
+            .expect("failed to set permissions");
+        named_temp
+            .write_all(include_bytes!(env!("LLDB_BUNDLE_DEBUGSERVER_PATH")))
+            .expect("creating debugserver failed");
 
         unsafe {
             std::env::set_var("LLDB_DEBUGSERVER_PATH", named_temp.path());
@@ -47,7 +60,8 @@ fn main() {
     {
         let debugserver = env!("LLDB_REFERENCE_DEBUGSERVER_PATH");
         if let Some(relative_path) = debugserver.strip_prefix("@executable/") {
-            let mut executable_path = std::env::current_exe().expect("Failed to get current executable path");
+            let mut executable_path =
+                std::env::current_exe().expect("Failed to get current executable path");
             executable_path.push(relative_path);
             std::env::set_var("LLDB_DEBUGSERVER_PATH", executable_path);
         } else {
@@ -69,7 +83,9 @@ fn main() {
             .tempfile()
             .expect("failed to create temporary file");
 
-        named_temp.write_all(include_bytes!(env!("CLS_ATTACH_LIB_PATH"))).expect("creating cls attach library failed");
+        named_temp
+            .write_all(include_bytes!(env!("CLS_ATTACH_LIB_PATH")))
+            .expect("creating cls attach library failed");
 
         named_temp
     };
@@ -85,7 +101,11 @@ fn main() {
     let attach_info = SBAttachInfo::new_with_pid(unity_pid);
 
     let process = target.attach(attach_info).unwrap();
-    println!("Attaching process took {:?}, running?: {}", attach.elapsed(), process.is_running());
+    eprintln!(
+        "Attaching process took {:?}, running?: {}",
+        attach.elapsed(),
+        process.is_running()
+    );
 
     let before_break = Instant::now();
 
@@ -97,9 +117,13 @@ fn main() {
             continue;
         }
         for symbol in module.symbols() {
-            //println!("Processing symbol {:?}", symbol);
+            //eprintln!("Processing symbol {:?}", symbol);
             if symbol.name().contains("SceneTracker::Update(") {
-                update = Some(symbol.start_address().expect("no start address for SceneTracker::Update"));
+                update = Some(
+                    symbol
+                        .start_address()
+                        .expect("no start address for SceneTracker::Update"),
+                );
                 break 'modules;
             }
         }
@@ -113,7 +137,7 @@ fn main() {
 
     process.continue_execution().unwrap();
 
-    println!("continue to breakpoint took {:?}", before_break.elapsed());
+    eprintln!("continue to breakpoint took {:?}", before_break.elapsed());
 
     if target.byte_roder() != current_byte_order() {
         eprintln!(
@@ -142,8 +166,11 @@ fn main() {
     }
 
     #[cfg(windows)]
-    fn load_image(process: &SBProcess, load_path: &std::path::Path) -> Result<LoadImageResult<impl FnOnce()>, SBError> {
-        // on windows, we can find_module for modules we just loaded, so we use 
+    fn load_image(
+        process: &SBProcess,
+        load_path: &std::path::Path,
+    ) -> Result<LoadImageResult<impl FnOnce()>, SBError> {
+        // on windows, we can find_module for modules we just loaded, so we use
         let target = process.target().unwrap();
 
         let path = load_path.to_str().unwrap();
@@ -153,7 +180,8 @@ fn main() {
         // not working on posix (at least macos)
         let dylib = target.find_module(&dylib).expect("loaded dylib not found");
 
-        let saver_save = dylib.find_functions("CONSOLE_LOG_SAVER_SAVE", FunctionNameType::AUTO.bits())
+        let saver_save = dylib
+            .find_functions("CONSOLE_LOG_SAVER_SAVE", FunctionNameType::AUTO.bits())
             .iter()
             .nth(0)
             .unwrap()
@@ -161,7 +189,8 @@ fn main() {
             .start_address()
             .unwrap()
             .load_address(&target);
-        let free_mem = dylib.find_functions("CONSOLE_LOG_SAVER_FREE_MEM", FunctionNameType::AUTO.bits())
+        let free_mem = dylib
+            .find_functions("CONSOLE_LOG_SAVER_FREE_MEM", FunctionNameType::AUTO.bits())
             .iter()
             .nth(0)
             .unwrap()
@@ -169,7 +198,8 @@ fn main() {
             .start_address()
             .unwrap()
             .load_address(&target);
-        let location = dylib.find_symbols("CONSOLE_LOG_SAVER_SAVED_LOCATION", SymbolType::Data)
+        let location = dylib
+            .find_symbols("CONSOLE_LOG_SAVER_SAVED_LOCATION", SymbolType::Data)
             .iter()
             .nth(0)
             .unwrap()
@@ -185,63 +215,66 @@ fn main() {
             location,
             unload: move || {
                 process.unload_image(image_token).expect("unloading image");
-            }
+            },
         })
     }
 
     #[cfg(unix)]
-    fn load_image(process: &SBProcess, load_path: &std::path::Path) -> Result<LoadImageResult<impl FnOnce()>, SBError> {
+    fn load_image(
+        process: &SBProcess,
+        load_path: &std::path::Path,
+    ) -> Result<LoadImageResult<impl FnOnce()>, SBError> {
         use std::os::unix::ffi::OsStrExt;
         // on unix, we cannot find_module for modules we just loaded,
-        // so we use directly calling dlopen 
+        // so we use directly calling dlopen
         let frame = process.selected_thread().frames().nth(0).unwrap();
 
         /*
-        C-like expression:
-        struct InOut {
-          // input data
-          const char *load_path,
-          // constants. For easier writing code, we pass constants with inoput struct
-          const char *saver_save_name,
-          const char *free_mem_name,
-          const char *location_name, 
-          // error data.
-          const char *error,
-          size_t error_len,
-          // success data
-          void *handle,
-          void *saver_save,
-          void *free_mem_save,
-          void *location,
-        }
+         C-like expression:
+         struct InOut {
+           // input data
+           const char *load_path,
+           // constants. For easier writing code, we pass constants with inoput struct
+           const char *saver_save_name,
+           const char *free_mem_name,
+           const char *location_name,
+           // error data.
+           const char *error,
+           size_t error_len,
+           // success data
+           void *handle,
+           void *saver_save,
+           void *free_mem_save,
+           void *location,
+         }
 
-        #define RTLD_LAZY 1
-        InOut *input = <pointer>;
+         #define RTLD_LAZY 1
+         InOut *input = <pointer>;
 
-        input.handle = void *handle = dlopen(input->load_path, RTLD_LAZY);
-        if (handle == NULL) goto error;
+         input.handle = void *handle = dlopen(input->load_path, RTLD_LAZY);
+         if (handle == NULL) goto error;
 
-        const char *saver_save_name = input->saver_save_name;
-        input.saver_save = void *saver_save = dlsym(handle, saver_save_name);
-        if (saver_save == NULL) goto error;
+         const char *saver_save_name = input->saver_save_name;
+         input.saver_save = void *saver_save = dlsym(handle, saver_save_name);
+         if (saver_save == NULL) goto error;
 
-        const char *free_mem_name = input->free_mem_name;
-        input.free_mem = void *free_mem = dlsym(handle, free_mem_name);
-        if (free_mem == NULL) goto error;
+         const char *free_mem_name = input->free_mem_name;
+         input.free_mem = void *free_mem = dlsym(handle, free_mem_name);
+         if (free_mem == NULL) goto error;
 
-        const char *location_name = input->location_name;
-        input.location   = void *location   = dlsym(handle, location_name);
-        if (location == NULL) goto error;
+         const char *location_name = input->location_name;
+         input.location   = void *location   = dlsym(handle, location_name);
+         if (location == NULL) goto error;
 
-        goto return;
-       error:
-        input.error = void *error = dlerror();
-        if (error != null) input.error_len = strlen(error);
-        if (handle != null) dlclose(handle);
-        goto return;
-       return:
-        return;
-         */
+         goto return;
+        error:
+         input.error = void *error = dlerror();
+         if (error != null) input.error_len = strlen(error);
+         if (handle != null) dlclose(handle);
+         goto return;
+        return:
+         return;
+          */
 
         let load_path_idx: usize = 0;
         let saver_save_name_idx: usize = 1;
@@ -261,11 +294,13 @@ fn main() {
 
         const STRUCT_DATA_SIZE: usize = size_of::<usize>() * INOUT_ELEMENT_COUNT;
 
-        let mut buffer = Vec::with_capacity(STRUCT_DATA_SIZE
-            + (load_path.as_os_str().len() + 1)
-            + (saver_save_name.len() + 1)
-            + (free_mem_name.len() + 1)
-            + (location_name.len() + 1));
+        let mut buffer = Vec::with_capacity(
+            STRUCT_DATA_SIZE
+                + (load_path.as_os_str().len() + 1)
+                + (saver_save_name.len() + 1)
+                + (free_mem_name.len() + 1)
+                + (location_name.len() + 1),
+        );
         buffer.extend_from_slice(&[0u8; STRUCT_DATA_SIZE]);
         let mut buffer_writer = std::io::Cursor::new(&mut buffer);
 
@@ -282,25 +317,46 @@ fn main() {
         let free_mem_name_offset = write_get_ptr(&mut buffer_writer, &free_mem_name.as_bytes());
         let location_name_offset = write_get_ptr(&mut buffer_writer, &location_name.as_bytes());
 
-        let buffer_location = process.allocate_memory(buffer.len(), Permissions::READABLE | Permissions::WRITABLE).expect("allocating memory");
+        let buffer_location = process
+            .allocate_memory(buffer.len(), Permissions::READABLE | Permissions::WRITABLE)
+            .expect("allocating memory");
 
         fn set_usize(buffer: &mut Vec<u8>, index: usize, value: usize) {
             let offset = index * size_of::<usize>();
             buffer[offset..][..size_of::<usize>()].copy_from_slice(&value.to_ne_bytes());
         }
 
-        set_usize(&mut buffer, load_path_idx, (buffer_location + load_path_offset) as usize);
-        set_usize(&mut buffer, saver_save_name_idx, (buffer_location + saver_save_name_offset) as usize);
-        set_usize(&mut buffer, free_mem_name_idx, (buffer_location + free_mem_name_offset) as usize);
-        set_usize(&mut buffer, location_name_idx, (buffer_location + location_name_offset) as usize);
+        set_usize(
+            &mut buffer,
+            load_path_idx,
+            (buffer_location + load_path_offset) as usize,
+        );
+        set_usize(
+            &mut buffer,
+            saver_save_name_idx,
+            (buffer_location + saver_save_name_offset) as usize,
+        );
+        set_usize(
+            &mut buffer,
+            free_mem_name_idx,
+            (buffer_location + free_mem_name_offset) as usize,
+        );
+        set_usize(
+            &mut buffer,
+            location_name_idx,
+            (buffer_location + location_name_offset) as usize,
+        );
 
-        process.write_memory(buffer_location, &buffer).expect("writing memory");
+        process
+            .write_memory(buffer_location, &buffer)
+            .expect("writing memory");
         drop(buffer);
 
         let error_block = 4;
         let ok_block = 8;
 
-        let expression = format!(r#"
+        let expression = format!(
+            r#"
 #!mini-llvm-expr 9
 define_struct InOut ptr ptr ptr ptr ptr iptr ptr ptr ptr ptr
 ; functions
@@ -400,13 +456,16 @@ begin_block 7
 
 begin_block 8 # ok_block
   ret_void
-"#);
+"#
+        );
 
         let options = SBExpressionOptions::new();
         let result = frame.evaluate_expression(&expression, &options);
 
         let mut read_buffer = [0usize; INOUT_ELEMENT_COUNT];
-        process.read_memory(buffer_location, bytemuck::cast_slice_mut(&mut read_buffer)).expect("reading memory");
+        process
+            .read_memory(buffer_location, bytemuck::cast_slice_mut(&mut read_buffer))
+            .expect("reading memory");
 
         // 0x1001 is kNoResult, which is not an error
         // https://github.com/llvm/llvm-project/blob/d6e65a66095cc3c93ea78669bc41d0885780e8ea/lldb/include/lldb/Expression/UserExpression.h#L274
@@ -429,8 +488,11 @@ begin_block 8 # ok_block
                 // there is error message from dlerror
                 let error_len = read_buffer[error_len_idx];
                 let mut error_buffer = vec![0u8; error_len + 1];
-                process.read_memory(error as lldb_addr_t, &mut error_buffer).expect("reading error message");
-                let error_message = CStr::from_bytes_with_nul(&error_buffer).expect("bad error msssage");
+                process
+                    .read_memory(error as lldb_addr_t, &mut error_buffer)
+                    .expect("reading error message");
+                let error_message =
+                    CStr::from_bytes_with_nul(&error_buffer).expect("bad error msssage");
                 let message = error_message.to_str().expect("bad utf8 message");
                 panic!("dlopen or dlsym failed with error: {message}")
             } else {
@@ -440,14 +502,19 @@ begin_block 8 # ok_block
 
         let unload = move || {
             let options = SBExpressionOptions::new();
-            frame.evaluate_expression(&format!(r#"
+            frame.evaluate_expression(
+                &format!(
+                    r#"
 #!mini-llvm-expr 1
 define_function_type i32 dlclose ptr
 declare_function dlclose dlclose
 
 const target_ptr ptr {handle}
 call ret dlclose dlclose target_ptr
-ret_void"#), &options);
+ret_void"#
+                ),
+                &options,
+            );
         };
 
         Ok(LoadImageResult {
@@ -459,44 +526,71 @@ ret_void"#), &options);
     }
 
     {
+        let mut cls_file_builder = ClsFileBuilder::new();
+        cls_file_builder = cls_file_builder.add_header(
+            "Vendor",
+            concat!(
+                "ConsoleLogSaver/",
+                env!("CARGO_PKG_VERSION"),
+                " (CLS-LLDB-RS)"
+            ),
+        );
+        let mut cls_file_builder = cls_file_builder.begin_body();
+
         let load_image = load_image(&process, attach_lib_dylib_path.as_ref()).expect("load_image");
 
         let saver_save = load_image.saver_save;
         let free_mem = load_image.free_mem;
         let location = load_image.location;
 
-        println!("saver save address: {}", saver_save);
-        println!("saver location address: {}", location);
+        eprintln!("saver save address: {}", saver_save);
+        eprintln!("saver location address: {}", location);
 
-        ctx.eval(&format!(r##"
+        ctx.eval(&format!(
+            r##"
         #!mini-llvm-expr 1
         const target_ptr ptr {saver_save}
         define_function_type void void_no_arg
         call _ void_no_arg target_ptr
         ret_void
-        "##));
+        "##
+        ));
 
         let mut pointer = 0usize;
-        process.read_memory(location, bytemuck::cast_slice_mut(std::slice::from_mut(&mut pointer))).expect("reading pointer");
+        process
+            .read_memory(
+                location,
+                bytemuck::cast_slice_mut(std::slice::from_mut(&mut pointer)),
+            )
+            .expect("reading pointer");
         let pointer = pointer as lldb_addr_t;
 
         let mut data_size = 0u64;
-        process.read_memory(pointer, bytemuck::cast_slice_mut(std::slice::from_mut(&mut data_size))).expect("reading size memory");
+        process
+            .read_memory(
+                pointer,
+                bytemuck::cast_slice_mut(std::slice::from_mut(&mut data_size)),
+            )
+            .expect("reading size memory");
 
         if data_size >= usize::MAX as u64 {
             panic!("size overflow");
         }
 
         let mut buffer = vec![0u8; data_size as usize];
-        process.read_memory(pointer + 8, &mut buffer).expect("reading data memory");
+        process
+            .read_memory(pointer + 8, &mut buffer)
+            .expect("reading data memory");
 
-        ctx.eval(&format!(r##"
+        ctx.eval(&format!(
+            r##"
         #!mini-llvm-expr 1
         const target_ptr ptr {free_mem}
         define_function_type void void_no_arg
         call _ void_no_arg target_ptr
         ret_void
-        "##));
+        "##
+        ));
 
         let mut reader = std::io::Cursor::new(&buffer);
         let version: i32 = reader.read_i32::<NativeEndian>().unwrap();
@@ -505,18 +599,23 @@ ret_void"#), &options);
             for i in 0..length {
                 let char_length: i32 = reader.read_i32::<NativeEndian>().unwrap();
                 let mut buffer = vec![0u16; char_length as usize];
-                reader.read_u16_into::<NativeEndian>(buffer.as_mut_slice()).unwrap();
+                reader
+                    .read_u16_into::<NativeEndian>(buffer.as_mut_slice())
+                    .unwrap();
                 let log_message = String::from_utf16(&buffer).unwrap();
-                println!("log message: of {i}\n{log_message}");
+                cls_file_builder = cls_file_builder.add_content("log-element", &log_message);
+                //eprintln!("log message: of {i}\n{log_message}");
             }
         } else {
-            println!("version mismatch ({version})");
+            eprintln!("version mismatch ({version})");
         }
 
         (load_image.unload)();
+
+        print!("{}", cls_file_builder.build());
     }
 
-    // I don't know why but detaching with synchronous and no resume 
+    // I don't know why but detaching with synchronous and no resume
     // would freeze target process on detach after loading image.
     debugger.set_asynchronous(true);
     process.continue_execution().unwrap();
@@ -698,14 +797,12 @@ unsafe impl SBProcessExt for SBProcess {
     }
 }
 
-unsafe trait SBFileSpecExt : Sized {
+unsafe trait SBFileSpecExt: Sized {
     fn from_raw(raw: lldb::sys::SBFileSpecRef) -> Self;
 
     fn from_path(path: &str) -> Self {
         let path_cstring = std::ffi::CString::new(path).unwrap();
-        unsafe {
-            Self::from_raw(lldb::sys::CreateSBFileSpec2(path_cstring.as_ptr()))
-        }
+        unsafe { Self::from_raw(lldb::sys::CreateSBFileSpec2(path_cstring.as_ptr())) }
     }
 }
 
@@ -812,7 +909,7 @@ unsafe trait SBAddressExt {
                 Some(SBSection { raw: section_ref })
             }
         }
-    } 
+    }
 }
 
 unsafe impl SBAddressExt for SBAddress {
@@ -821,7 +918,7 @@ unsafe impl SBAddressExt for SBAddress {
     }
 }
 
-unsafe trait SBModuleSpecExt : Sized {
+unsafe trait SBModuleSpecExt: Sized {
     fn from_raw(raw: lldb::sys::SBModuleSpecRef) -> Self;
 
     fn new() -> Self {

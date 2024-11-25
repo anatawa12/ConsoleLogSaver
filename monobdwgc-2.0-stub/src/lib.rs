@@ -32,15 +32,25 @@ pub extern "C" fn mono_assembly_get_image(assembly: *mut MonoAssembly) -> *mut M
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_class_from_name(image: *mut MonoImage, namespace: *const c_char, name: *const c_char) -> *mut MonoClass {
+pub extern "C" fn mono_class_from_name(
+    image: *mut MonoImage,
+    namespace: *const c_char,
+    name: *const c_char,
+) -> *mut MonoClass {
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_class_get_field_from_name(class: *mut MonoClass, name: *const c_char) -> *mut MonoClassField {
+pub extern "C" fn mono_class_get_field_from_name(
+    class: *mut MonoClass,
+    name: *const c_char,
+) -> *mut MonoClassField {
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_object_new(domain: *mut MonoDomain, klass: *mut MonoClass) -> *mut MonoObject {
+pub extern "C" fn mono_object_new(
+    domain: *mut MonoDomain,
+    klass: *mut MonoClass,
+) -> *mut MonoObject {
     unsafe { zeroed() }
 }
 #[no_mangle]
@@ -48,7 +58,11 @@ pub extern "C" fn mono_runtime_object_init(this_obj: *mut MonoObject) {
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_field_get_value(obj: *mut MonoObject, field: *mut MonoClassField, value: *mut c_void) {
+pub extern "C" fn mono_field_get_value(
+    obj: *mut MonoObject,
+    field: *mut MonoClassField,
+    value: *mut c_void,
+) {
     unsafe { zeroed() }
 }
 #[no_mangle]
@@ -60,15 +74,26 @@ pub extern "C" fn mono_string_length(s: *mut MonoString) -> c_int {
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_method_desc_new(name: *const c_char, include_namespace: mono_bool) -> *mut MonoMethodDesc {
+pub extern "C" fn mono_method_desc_new(
+    name: *const c_char,
+    include_namespace: mono_bool,
+) -> *mut MonoMethodDesc {
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_method_desc_search_in_class(desc: *mut MonoMethodDesc, klass: *mut MonoClass) -> *mut MonoMethod {
+pub extern "C" fn mono_method_desc_search_in_class(
+    desc: *mut MonoMethodDesc,
+    klass: *mut MonoClass,
+) -> *mut MonoMethod {
     unsafe { zeroed() }
 }
 #[no_mangle]
-pub extern "C" fn mono_runtime_invoke(method: *mut MonoMethod, obj: *mut c_void, params: *mut *mut c_void, exc: *mut *mut MonoObject) -> *mut MonoObject {
+pub extern "C" fn mono_runtime_invoke(
+    method: *mut MonoMethod,
+    obj: *mut c_void,
+    params: *mut *mut c_void,
+    exc: *mut *mut MonoObject,
+) -> *mut MonoObject {
     unsafe { zeroed() }
 }
 #[no_mangle]

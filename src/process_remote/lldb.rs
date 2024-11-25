@@ -2,22 +2,21 @@ mod common;
 mod unix;
 
 use super::ProcessRemoteError;
-use crate::{current_byte_order, SBModuleExt, SBProcessExt, SBTargetExt};
+use crate::current_byte_order;
 use lldb::{
-    lldb_addr_t, lldb_pid_t, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions,
-    SBFrame,
+    lldb_addr_t, lldb_pid_t, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions, SBFrame,
 };
 use std::io::Write;
 
-#[cfg(unix)]
-use unix::load_image;
 #[cfg(not(unix))]
 use common::load_image;
-
 #[cfg(unix)]
-use unix::prepare_debug_server;
+use unix::load_image;
+
 #[cfg(not(unix))]
 use common::prepare_debug_server;
+#[cfg(unix)]
+use unix::prepare_debug_server;
 
 pub fn get_buffer(pid: lldb_pid_t) -> Result<Vec<u8>, ProcessRemoteError> {
     SBDebugger::initialize();
@@ -85,7 +84,7 @@ pub fn get_buffer(pid: lldb_pid_t) -> Result<Vec<u8>, ProcessRemoteError> {
     process.continue_execution().unwrap();
     // now on breakpoint
 
-    if target.byte_roder() != current_byte_order() {
+    if target.byte_order() != current_byte_order() {
         return Err(ProcessRemoteError::ByteOrderMismatch);
     }
 

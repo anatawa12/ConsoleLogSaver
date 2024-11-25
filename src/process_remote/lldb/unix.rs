@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::SBProcessExt;
 use lldb::{lldb_addr_t, Permissions, SBFrame, SBProcess};
 use std::convert::Infallible;
 use std::ffi::CStr;
@@ -41,8 +40,9 @@ declare_function dlclose dlclose
 const target_ptr ptr {handle}
 call ret dlclose dlclose target_ptr
 ret_void"#
-            )
-        ).ok(); // ignore error
+            ),
+        )
+        .ok(); // ignore error
     }
 }
 
@@ -357,9 +357,13 @@ pub fn prepare_debug_server() -> Option<TempPath> {
         let mut executable_path =
             std::env::current_exe().expect("Failed to get current executable path");
         executable_path.push(relative_path);
-        unsafe { std::env::set_var("LLDB_DEBUGSERVER_PATH", executable_path); }
+        unsafe {
+            std::env::set_var("LLDB_DEBUGSERVER_PATH", executable_path);
+        }
     } else {
-        unsafe { std::env::set_var("LLDB_DEBUGSERVER_PATH", debugserver); }
+        unsafe {
+            std::env::set_var("LLDB_DEBUGSERVER_PATH", debugserver);
+        }
     }
 
     None

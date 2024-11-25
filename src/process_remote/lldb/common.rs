@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::{SBFileSpecExt, SBProcessExt};
 use lldb::{lldb_addr_t, FunctionNameType, SBFileSpec, SBProcess, SymbolType};
 use std::convert::Infallible;
 use tempfile::TempPath;
@@ -41,7 +40,7 @@ fn load_image(
     let target = process.target().unwrap();
 
     let path = load_path.to_str().unwrap();
-    let dylib = SBFileSpec::from_path(path);
+    let dylib = SBFileSpec::from_path(path, true);
     let image_token = process.load_image(&dylib).expect("loading image");
 
     // not working on posix (at least macos)

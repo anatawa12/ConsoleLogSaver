@@ -104,7 +104,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 [[package]]
 name = "lldb"
 version = "0.0.11"
-source = "git+https://github.com/endoli/lldb.rs.git#4efe9cdd8fd9c6f2e14bec9a29908282d445f5ed"
+source = "git+https://github.com/endoli/lldb.rs.git?rev=87d7afc1bcf4da989bceac400c524e6dc0d69169#87d7afc1bcf4da989bceac400c524e6dc0d69169"
 dependencies = [
  "libc",
  "lldb-sys",

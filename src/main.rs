@@ -50,7 +50,7 @@ fn find_unity_processes() -> Vec<UnityProcess> {
         let Some(index) = cmd.iter().position(|x| x == "-projectPath") else {
             continue;
         };
-        let Some(project_path) = cmd.get(index) else {
+        let Some(project_path) = cmd.get(index + 1) else {
             continue;
         };
         let project_path = std::path::Path::new(project_path);

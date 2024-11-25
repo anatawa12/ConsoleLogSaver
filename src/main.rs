@@ -32,9 +32,9 @@ fn run_console_log_saver(pid: process_remote::ProcessId) -> String {
     cls_file_builder.add_header(
         "Vendor",
         concat!(
-        "ConsoleLogSaver/",
-        env!("CARGO_PKG_VERSION"),
-        " (CLS-LLDB-RS)"
+            "ConsoleLogSaver/",
+            env!("CARGO_PKG_VERSION"),
+            " (CLS-LLDB-RS)"
         ),
     );
 

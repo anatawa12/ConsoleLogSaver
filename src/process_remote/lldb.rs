@@ -2,7 +2,10 @@ mod common;
 mod unix;
 
 use super::ProcessRemoteError;
-use lldb::{lldb_addr_t, lldb_pid_t, ByteOrder, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions, SBFrame};
+use lldb::{
+    lldb_addr_t, lldb_pid_t, ByteOrder, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions,
+    SBFrame,
+};
 use std::io::Write;
 
 #[cfg(not(unix))]

@@ -79,6 +79,7 @@ pub fn get_buffer(pid: lldb_pid_t) -> Result<Vec<u8>, ProcessRemoteError> {
     breakpoint.set_oneshot(true);
 
     process.continue_execution().unwrap();
+    target.delete_breakpoint(breakpoint.id());
     // now on breakpoint
 
     if target.byte_order() != current_byte_order() {

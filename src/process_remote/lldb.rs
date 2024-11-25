@@ -2,7 +2,6 @@ mod common;
 mod unix;
 
 use super::ProcessRemoteError;
-use crate::current_byte_order;
 use lldb::{lldb_addr_t, lldb_pid_t, ByteOrder, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions, SBFrame};
 use std::io::Write;
 

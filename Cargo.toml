@@ -17,6 +17,13 @@ regex = "1.11.1"
 whoami = { version = "1.5.2", default-features = false }
 home = "0.5.9"
 
+[[bin]]
+name = "ConsoleLogSaverCli"
+path = "src/cli.rs"
+
+[features]
+external_debug_server = []
+
 [workspace]
 members = [
     'cls-attach-lib', 
@@ -25,6 +32,3 @@ members = [
 
 [patch.crates-io]
 lldb-sys = { git = "https://github.com/anatawa12/lldb-sys.rs", branch = "static-link" }
-
-[features]
-external_debug_server = []

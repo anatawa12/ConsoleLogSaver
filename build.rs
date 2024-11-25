@@ -38,7 +38,7 @@ fn main() {
         println!("cargo:rustc-link-lib=framework=ApplicationServices");
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=Security");
-        println!("cargo:rustc-link-lib=static=compression");
+        println!("cargo:rustc-link-lib=dylib=compression");
     } else if target.contains("-windows-") {
         println!("cargo:rustc-link-lib=dylib=Rpcrt4");
     }

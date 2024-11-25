@@ -13,6 +13,9 @@ sysinfo = "0.32.0"
 tempfile = "3.14.0"
 thiserror = "2.0.3"
 uuid = { version = "1.11.0", features = ["v4"] }
+regex = "1.11.1"
+whoami = { version = "1.5.2", default-features = false }
+home = "0.5.9"
 
 [workspace]
 members = [

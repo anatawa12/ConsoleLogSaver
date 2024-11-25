@@ -3,14 +3,19 @@ mod process_remote;
 
 use crate::cls_file::{ClsFileBuilder, ClsHeadingBuilder};
 use byteorder::{NativeEndian, ReadBytesExt};
+use regex::Regex;
 use serde::Deserialize;
+use std::borrow::Cow;
+use std::ops::Deref;
+use std::path::Component;
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
 
 fn main() {
     let unity_processes = find_unity_processes();
+    let settings = ConsoleLogSaverConfig::default();
 
     let unity_pid = unity_processes.first().unwrap().pid;
-    print!("{}", run_console_log_saver(unity_pid));
+    print!("{}", run_console_log_saver(unity_pid, &settings));
 }
 
 struct UnityProcess {
@@ -66,8 +71,148 @@ fn find_unity_processes() -> Vec<UnityProcess> {
     unity_processes
 }
 
-fn run_console_log_saver(pid: process_remote::ProcessId) -> String {
+struct ConsoleLogSaverConfig {
+    hide_user_name: bool,
+    hide_user_home: bool,
+    hide_os_info: bool,
+    hide_aws_upload_signature: bool,
+}
+
+impl Default for ConsoleLogSaverConfig {
+    fn default() -> Self {
+        Self {
+            hide_user_name: true,
+            hide_user_home: true,
+            hide_os_info: false,
+            hide_aws_upload_signature: true,
+        }
+    }
+}
+
+struct ReplaceSet {
+    pairs: Vec<(&'static Regex, &'static str)>,
+}
+
+impl ReplaceSet {
+    fn new(config: &ConsoleLogSaverConfig) -> Self {
+        let mut regex_pairs = vec![];
+
+        if config.hide_user_home {
+            static REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+                let home = home::home_dir().expect("failed to get home directory");
+                let mut regex = String::new();
+
+                let mut last_separator = true;
+                for x in home.components() {
+                    match x {
+                        Component::Prefix(prefix) => {
+                            regex.push_str(&regex::escape(&prefix.as_os_str().to_string_lossy()));
+                        }
+                        Component::RootDir => {
+                            regex.push_str(&r#"[/\\]"#);
+                            last_separator = true;
+                        }
+                        Component::Normal(normal) => {
+                            if !last_separator {
+                                regex.push_str(&r#"[/\\]"#);
+                            }
+                            regex.push_str(&regex::escape(&normal.to_string_lossy()));
+                            last_separator = false;
+                        }
+                        Component::CurDir => panic!("should not happen"),
+                        Component::ParentDir => panic!("should not happen"),
+                    }
+                }
+
+                eprintln!("{}", regex);
+
+                regex::RegexBuilder::new(&regex)
+                    .case_insensitive(true)
+                    .build()
+                    .expect("failed to create regex")
+            });
+            regex_pairs.push((REGEX.deref(), "user-home"));
+        }
+
+        if config.hide_user_name {
+            static REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+                let user_name = whoami::username();
+                regex::RegexBuilder::new(&regex::escape(&user_name))
+                    .case_insensitive(true)
+                    .build()
+                    .expect("failed to create regex")
+            });
+            regex_pairs.push((REGEX.deref(), "user-name"));
+        }
+
+        if config.hide_aws_upload_signature {
+            static REGEX: std::sync::LazyLock<Regex> =
+                std::sync::LazyLock::new(|| Regex::new(r"(?<prefix>Signature=)[^&\s]+").unwrap());
+            regex_pairs.push((REGEX.deref(), "signature-param"));
+        }
+
+        // always hidden data
+
+        {
+            // AWSAccessKeyId
+            static REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+                Regex::new(r"(?<prefix>AWSAccessKeyId=)[^&\s]+").unwrap()
+            });
+            regex_pairs.push((REGEX.deref(), "aws-access-key-id-param"));
+        }
+
+        {
+            // AWSAccessKeyId
+            static REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+                Regex::new(r##"(?<prefix>"assetUrl"\s*:\s*")((?:[^\u0000-\u001F"\\]|\\(?:u[a-fA-F0-9]{4}|[^"\\/bfnrt]))*)(?<suffix>")"##).unwrap()
+            });
+            regex_pairs.push((REGEX.deref(), "asset-url"));
+        }
+
+        Self { pairs: regex_pairs }
+    }
+
+    fn replace_all<'a, 'b>(&'a self, input: Cow<'b, str>) -> Cow<'b, str> {
+        let mut output = input;
+
+        for (regex, replacement) in &self.pairs {
+            let replacer = |captures: &regex::Captures| {
+                let mut result = String::new();
+                if let Some(prefix) = captures.name("prefix") {
+                    result.push_str(prefix.as_str())
+                }
+                result.push_str("${");
+                result.push_str(replacement);
+                result.push_str("}");
+                if let Some(suffix) = captures.name("suffix") {
+                    result.push_str(suffix.as_str())
+                }
+                result
+            };
+            match output {
+                Cow::Borrowed(borrowed) => {
+                    output = regex.replace_all(borrowed, replacer);
+                }
+                Cow::Owned(owned) => match regex.replace_all(&owned, replacer) {
+                    Cow::Borrowed(borrowed) => {
+                        debug_assert_eq!(borrowed, &owned);
+                        output = Cow::Owned(owned);
+                    }
+                    Cow::Owned(owned) => {
+                        output = Cow::Owned(owned);
+                    }
+                },
+            }
+        }
+
+        output
+    }
+}
+
+fn run_console_log_saver(pid: process_remote::ProcessId, config: &ConsoleLogSaverConfig) -> String {
     let buffer = process_remote::get_buffer(pid).expect("Failed to get buffer");
+
+    let replacer = ReplaceSet::new(&config);
 
     let mut reader = TransferDataReader::new(buffer);
 
@@ -89,15 +234,32 @@ fn run_console_log_saver(pid: process_remote::ProcessId) -> String {
     let unity_version = reader.read_string();
     cls_file_builder.add_header("Unity-Version", &unity_version);
 
-    let os_description = reader.read_string();
-    cls_file_builder.add_header("Editor-Platform", &os_description);
+    if !config.hide_os_info {
+        let os_description = reader.read_string();
+        cls_file_builder.add_header("Editor-Platform", &os_description);
+    }
+
+    if config.hide_user_name {
+        cls_file_builder.add_header("Hidden-Data", "user-name");
+    }
+
+    if config.hide_user_home {
+        cls_file_builder.add_header("Hidden-Data", "user-home");
+    }
+
+    cls_file_builder.add_header("Hidden-Data", "aws-access-key-id-param");
+    cls_file_builder.add_header("Hidden-Data", "asset-url");
+
+    if config.hide_aws_upload_signature {
+        cls_file_builder.add_header("Hidden-Data", "signature-param");
+    }
 
     let build_target = reader.read_string();
     cls_file_builder.add_header("Build-Target", &build_target);
 
     let current_directory = reader.read_string();
 
-    append_upm(&mut cls_file_builder, &current_directory);
+    append_upm(&mut cls_file_builder, &current_directory, &replacer);
     append_vpm(&mut cls_file_builder, &current_directory);
 
     let mut cls_file_builder = cls_file_builder.begin_body();
@@ -108,7 +270,10 @@ fn run_console_log_saver(pid: process_remote::ProcessId) -> String {
         let mode = reader.read_i32();
         cls_file_builder.add_header("Mode", &format!("{mode}")); // TODO: transfer to name
         cls_file_builder.add_header("Mode-Raw", &format!("{mode:08x}"));
-        cls_file_builder.add_content("log-element", &log_message);
+        cls_file_builder.add_content(
+            "log-element",
+            &replacer.replace_all(Cow::Borrowed(&log_message)),
+        );
     }
 
     cls_file_builder.build()
@@ -139,7 +304,7 @@ impl TransferDataReader {
     }
 }
 
-fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str) {
+fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str, replacer: &ReplaceSet) {
     #[derive(Deserialize)]
     struct PackageLock {
         dependencies: std::collections::BTreeMap<String, UpmLockedDependency>,
@@ -147,6 +312,53 @@ fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str) {
     #[derive(Deserialize)]
     struct UpmLockedDependency {
         version: Option<String>,
+    }
+
+    enum UpmDependencyType {
+        NpmRemote,
+        HttpsGit,
+        SshGit,
+        GitGit,
+        FileGit,
+        FileRelative,
+        FileAbsolute,
+    }
+
+    impl UpmDependencyType {
+        fn detect_from_version(version: &str) -> Self {
+            if version.starts_with("file://")
+                || version.contains(".git")
+                || version.starts_with("git+")
+            {
+                // it's some git URLs
+                let version = version.strip_prefix("git+").unwrap_or(version);
+
+                if version.starts_with("https:") {
+                    return UpmDependencyType::HttpsGit;
+                }
+                if version.starts_with("ssh:") {
+                    return UpmDependencyType::SshGit;
+                }
+                if version.starts_with("file:") {
+                    return UpmDependencyType::FileGit;
+                }
+                if version.starts_with("git:") {
+                    return UpmDependencyType::GitGit;
+                }
+            }
+
+            if let Some(path) = version.strip_prefix("file:") {
+                // it's some file URLs
+                let path = std::path::Path::new(path);
+                if path.has_root() {
+                    return UpmDependencyType::FileAbsolute;
+                } else {
+                    return UpmDependencyType::FileRelative;
+                }
+            }
+
+            UpmDependencyType::NpmRemote
+        }
     }
 
     let package_lock = std::path::Path::new(cwd).join("Packages/packages-lock.json");
@@ -158,6 +370,24 @@ fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str) {
     };
     for (dependency, lock_info) in package_lock.dependencies {
         if let Some(version) = lock_info.version {
+            let mut version = Cow::Borrowed(version.as_str());
+            match UpmDependencyType::detect_from_version(&version) {
+                UpmDependencyType::NpmRemote
+                | UpmDependencyType::HttpsGit
+                | UpmDependencyType::SshGit
+                | UpmDependencyType::GitGit => {
+                    // Those are remote, so it's very unlikely to include personal information
+                }
+                UpmDependencyType::FileGit | UpmDependencyType::FileAbsolute => {
+                    // file git is mostly absolute path
+                    // an absolute path may include user home
+                    let replaced = replacer.replace_all(version);
+                    version = replaced;
+                }
+                UpmDependencyType::FileRelative => {
+                    // relative path mostly doesn't include user home
+                }
+            }
             builder.add_header("Upm-Dependency", &format!("{dependency}@{version}"));
         }
     }

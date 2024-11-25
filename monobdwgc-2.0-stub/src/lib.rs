@@ -11,7 +11,7 @@ macro_rules! structs {
     };
 }
 
-structs!(MonoDomain MonoAssemblyName MonoAssembly MonoImage MonoClass MonoClassField MonoMethod MonoObject MonoString MonoMethodDesc);
+structs!(MonoDomain MonoAssemblyName MonoAssembly MonoImage MonoClass MonoClassField MonoMethod MonoObject MonoString MonoMethodDesc MonoProperty);
 
 type mono_bool = i32; // int32_t
 
@@ -47,10 +47,28 @@ pub extern "C" fn mono_class_get_field_from_name(
     unsafe { zeroed() }
 }
 #[no_mangle]
+pub extern "C" fn mono_class_get_property_from_name(
+    class: *mut MonoClass,
+    name: *const c_char,
+) -> *mut MonoProperty {
+    unsafe { zeroed() }
+}
+#[no_mangle]
+pub extern "C" fn mono_property_get_get_method(prop: *mut MonoProperty) -> *mut MonoMethod {
+    unsafe { zeroed() }
+}
+#[no_mangle]
 pub extern "C" fn mono_object_new(
     domain: *mut MonoDomain,
     klass: *mut MonoClass,
 ) -> *mut MonoObject {
+    unsafe { zeroed() }
+}
+#[no_mangle]
+pub extern "C" fn mono_object_to_string(
+    obj: *mut MonoObject,
+    exc: *mut *mut MonoObject,
+) -> *mut MonoString {
     unsafe { zeroed() }
 }
 #[no_mangle]

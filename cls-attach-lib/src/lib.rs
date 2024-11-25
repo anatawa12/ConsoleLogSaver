@@ -10,7 +10,7 @@ macro_rules! structs {
     };
 }
 
-structs!(MonoDomain MonoAssemblyName MonoAssembly MonoImage MonoClass MonoClassField MonoMethod MonoObject MonoString MonoMethodDesc);
+structs!(MonoDomain MonoAssemblyName MonoAssembly MonoImage MonoClass MonoClassField MonoMethod MonoObject MonoString MonoMethodDesc MonoProperty);
 
 type mono_bool = i32; // int32_t
 
@@ -30,7 +30,13 @@ extern "C" {
         class: *mut MonoClass,
         name: *const c_char,
     ) -> *mut MonoClassField;
+    fn mono_class_get_property_from_name(
+        class: *mut MonoClass,
+        name: *const c_char,
+    ) -> *mut MonoProperty;
+    fn mono_property_get_get_method(prop: *mut MonoProperty) -> *mut MonoMethod;
     fn mono_object_new(domain: *mut MonoDomain, klass: *mut MonoClass) -> *mut MonoObject;
+    fn mono_object_to_string(obj: *mut MonoObject, exc: *mut *mut MonoObject) -> *mut MonoString;
     fn mono_runtime_object_init(this_obj: *mut MonoObject);
     fn mono_field_get_value(obj: *mut MonoObject, field: *mut MonoClassField, value: *mut c_void);
     fn mono_string_chars(s: *mut MonoString) -> *mut u16;
@@ -88,7 +94,6 @@ impl TransferDataBuilder {
         let mut builder = Vec::new();
         builder.extend_from_slice(&[0u8; 8]); // capacity space
         builder.extend_from_slice(&[0u8; 8]); // length space
-        builder.extend_from_slice(&1i32.to_ne_bytes());
         TransferDataBuilder { builder }
     }
 
@@ -131,16 +136,26 @@ impl TransferDataBuilder {
 extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
     unsafe {
         let domain = mono_domain_get();
-        let assembly_name = mono_assembly_name_new(cs!("UnityEditor"));
-        let assembly = mono_assembly_loaded(assembly_name);
-        let image = mono_assembly_get_image(assembly);
 
-        let LogEntryClass = mono_class_from_name(image, cs!("UnityEditor"), cs!("LogEntry"));
+        unsafe fn get_assembly(name: *const c_char) -> *mut MonoImage {
+            unsafe {
+                let assembly_name = mono_assembly_name_new(name);
+                let assembly = mono_assembly_loaded(assembly_name);
+                mono_assembly_get_image(assembly)
+            }
+        }
+
+        let unity_editor = get_assembly(cs!("UnityEditor"));
+        let unity_engine = get_assembly(cs!("UnityEngine"));
+        let mscorlib = get_assembly(cs!("mscorlib"));
+
+        let LogEntryClass = mono_class_from_name(unity_editor, cs!("UnityEditor"), cs!("LogEntry"));
         let LogEntryClass_message = mono_class_get_field_from_name(LogEntryClass, cs!("message"));
         let LogEntryClass_line = mono_class_get_field_from_name(LogEntryClass, cs!("line"));
         let LogEntryClass_mode = mono_class_get_field_from_name(LogEntryClass, cs!("mode"));
 
-        let LogEntriesClass = mono_class_from_name(image, cs!("UnityEditor"), cs!("LogEntries"));
+        let LogEntriesClass =
+            mono_class_from_name(unity_editor, cs!("UnityEditor"), cs!("LogEntries"));
         let StartGettingEntries = mono_method_desc_search_in_class(
             mono_method_desc_new(cs!("int:StartGettingEntries()"), 1),
             LogEntriesClass,
@@ -154,6 +169,79 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
             LogEntriesClass,
         );
 
+        let EditorUserBuildSettings = mono_class_from_name(
+            unity_editor,
+            cs!("UnityEditor"),
+            cs!("EditorUserBuildSettings"),
+        );
+        let EditorUserBuildSettings_activeBuildTarget =
+            mono_class_get_property_from_name(EditorUserBuildSettings, cs!("activeBuildTarget"));
+        let EditorUserBuildSettings_activeBuildTarget_get =
+            mono_property_get_get_method(EditorUserBuildSettings_activeBuildTarget);
+
+        let ApplicationClass =
+            mono_class_from_name(unity_engine, cs!("UnityEngine"), cs!("Application"));
+        let Application_unityVersion =
+            mono_class_get_property_from_name(ApplicationClass, cs!("unityVersion"));
+        let Application_unityVersion_get = mono_property_get_get_method(Application_unityVersion);
+
+        let RuntimeInformation = mono_class_from_name(
+            mscorlib,
+            cs!("System.Runtime.InteropServices"),
+            cs!("RuntimeInformation"),
+        );
+        let RuntimeInformation_OSDescription =
+            mono_class_get_property_from_name(RuntimeInformation, cs!("OSDescription"));
+        let RuntimeInformation_OSDescription_get =
+            mono_property_get_get_method(RuntimeInformation_OSDescription);
+
+        let Directory = mono_class_from_name(mscorlib, cs!("System.IO"), cs!("Directory"));
+        let Directory_GetCurrentDirectory = mono_method_desc_search_in_class(
+            mono_method_desc_new(cs!("System.String:GetCurrentDirectory()"), 1),
+            Directory,
+        );
+
+        unsafe fn mono_string_to_slice(message_obj: *mut MonoString) -> &'static [u16] {
+            unsafe {
+                let length = mono_string_length(message_obj);
+                let chars_ptr = mono_string_chars(message_obj);
+                std::slice::from_raw_parts(chars_ptr, length as usize)
+            }
+        }
+
+        let mut data_builder = TransferDataBuilder::new();
+        data_builder.write_i32(1i32);
+
+        // general info
+        let unityVersion = mono_runtime_invoke(
+            Application_unityVersion_get,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
+        data_builder.write_string(mono_string_to_slice(unityVersion as *mut _));
+
+        let OSDescription = mono_runtime_invoke(
+            RuntimeInformation_OSDescription_get,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
+        data_builder.write_string(mono_string_to_slice(OSDescription as *mut _));
+
+        let build_target = mono_runtime_invoke(
+            EditorUserBuildSettings_activeBuildTarget_get,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        );
+        let build_target_str = mono_object_to_string(build_target, null_mut());
+        data_builder.write_string(mono_string_to_slice(build_target_str));
+
+        let current_directory = mono_runtime_invoke(Directory_GetCurrentDirectory, null_mut(), null_mut(), null_mut());
+        data_builder.write_string(mono_string_to_slice(current_directory as *mut _));
+
+        // log info
         let logentry = mono_object_new(domain, LogEntryClass);
         mono_runtime_object_init(logentry);
 
@@ -171,7 +259,6 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         // int $line, $mode;
 
         // array size will be set to this place later
-        let mut data_builder = TransferDataBuilder::new();
         data_builder.write_i32(count);
 
         for mut index in 0..count {
@@ -189,10 +276,7 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
             mono_field_get_value(logentry, LogEntryClass_line, &mut line as *mut _ as *mut _);
             mono_field_get_value(logentry, LogEntryClass_mode, &mut mode as *mut _ as *mut _);
 
-            let length = mono_string_length(message_obj);
-            let chars_ptr = mono_string_chars(message_obj);
-            let chars_slice = std::slice::from_raw_parts(chars_ptr, length as usize);
-            data_builder.write_string(chars_slice);
+            data_builder.write_string(mono_string_to_slice(message_obj));
             data_builder.write_i32(mode);
         }
 

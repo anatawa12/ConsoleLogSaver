@@ -14,6 +14,7 @@ use std::ffi::CStr;
 use std::io::Write;
 use std::marker::PhantomData;
 use std::process::{exit, Stdio};
+use std::ptr::read;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
@@ -526,17 +527,6 @@ ret_void"#
     }
 
     {
-        let mut cls_file_builder = ClsFileBuilder::new();
-        cls_file_builder = cls_file_builder.add_header(
-            "Vendor",
-            concat!(
-                "ConsoleLogSaver/",
-                env!("CARGO_PKG_VERSION"),
-                " (CLS-LLDB-RS)"
-            ),
-        );
-        let mut cls_file_builder = cls_file_builder.begin_body();
-
         let load_image = load_image(&process, attach_lib_dylib_path.as_ref()).expect("load_image");
 
         let saver_save = load_image.saver_save;
@@ -593,8 +583,33 @@ ret_void"#
         ));
 
         let mut reader = TransferDataReader::new(buffer);
+
         let version: i32 = reader.read_i32();
         if version == 1 {
+            let mut cls_file_builder = ClsFileBuilder::new();
+            cls_file_builder = cls_file_builder.add_header(
+                "Vendor",
+                concat!(
+                    "ConsoleLogSaver/",
+                    env!("CARGO_PKG_VERSION"),
+                    " (CLS-LLDB-RS)"
+                ),
+            );
+
+            let unity_version = reader.read_string();
+            cls_file_builder = cls_file_builder.add_header("Unity-Version", &unity_version);
+
+            let os_description = reader.read_string();
+            cls_file_builder = cls_file_builder.add_header("Editor-Platform", &os_description);
+
+            let build_target = reader.read_string();
+            cls_file_builder = cls_file_builder.add_header("Build-Target", &build_target);
+
+            let current_directory = reader.read_string();
+            eprintln!("current_directory: {current_directory}");
+
+            let mut cls_file_builder = cls_file_builder.begin_body();
+
             let length: i32 = reader.read_i32();
             for _ in 0..length {
                 let log_message = reader.read_string();
@@ -603,13 +618,13 @@ ret_void"#
                 cls_file_builder = cls_file_builder.add_header("Mode-Raw", &format!("{mode:08x}"));
                 cls_file_builder = cls_file_builder.add_content("log-element", &log_message);
             }
+
+            print!("{}", cls_file_builder.build());
         } else {
             eprintln!("version mismatch ({version})");
         }
 
         (load_image.unload)();
-
-        print!("{}", cls_file_builder.build());
     }
 
     // I don't know why but detaching with synchronous and no resume

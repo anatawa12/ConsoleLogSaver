@@ -3,7 +3,6 @@ mod process_remote;
 
 use crate::cls_file::{ClsFileBuilder, ClsHeadingBuilder};
 use byteorder::{NativeEndian, ReadBytesExt};
-use lldb::{lldb_pid_t, ByteOrder};
 use serde::Deserialize;
 use std::env::args;
 
@@ -13,7 +12,7 @@ fn main() {
     let unity_pid = args
         .nth(1)
         .expect("please specify pid")
-        .parse::<lldb_pid_t>()
+        .parse::<process_remote::ProcessId>()
         .expect("Failed to parse unity pid");
 
     let buffer = process_remote::get_buffer(unity_pid).expect("Failed to get buffer");
@@ -133,15 +132,5 @@ fn append_vpm(builder: &mut ClsHeadingBuilder, cwd: &str) {
         if let Some(version) = lock_info.version {
             builder.add_header("Vpm-Dependency", &format!("{dependency}@{version}"));
         }
-    }
-}
-
-fn current_byte_order() -> ByteOrder {
-    if cfg!(target_endian = "little") {
-        ByteOrder::Little
-    } else if cfg!(target_endian = "big") {
-        ByteOrder::Big
-    } else {
-        ByteOrder::Invalid
     }
 }

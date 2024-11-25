@@ -3,9 +3,7 @@ mod unix;
 
 use super::ProcessRemoteError;
 use crate::current_byte_order;
-use lldb::{
-    lldb_addr_t, lldb_pid_t, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions, SBFrame,
-};
+use lldb::{lldb_addr_t, lldb_pid_t, ByteOrder, SBAttachInfo, SBDebugger, SBError, SBExpressionOptions, SBFrame};
 use std::io::Write;
 
 #[cfg(not(unix))]
@@ -178,4 +176,14 @@ fn eval_expr(frame: &SBFrame, expr: &str) -> Result<(), SBError> {
         return Err(result.error().unwrap());
     }
     Ok(())
+}
+
+fn current_byte_order() -> ByteOrder {
+    if cfg!(target_endian = "little") {
+        ByteOrder::Little
+    } else if cfg!(target_endian = "big") {
+        ByteOrder::Big
+    } else {
+        ByteOrder::Invalid
+    }
 }

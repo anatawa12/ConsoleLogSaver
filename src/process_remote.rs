@@ -9,3 +9,4 @@ pub enum ProcessRemoteError {
 }
 
 pub use lldb::get_buffer;
+pub type ProcessId = ::lldb::lldb_pid_t;

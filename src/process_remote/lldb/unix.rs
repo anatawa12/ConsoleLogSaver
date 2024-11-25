@@ -46,6 +46,7 @@ ret_void"#
     }
 }
 
+#[cfg(unix)]
 pub fn load_image(
     process: &SBProcess,
     load_path: &std::path::Path,

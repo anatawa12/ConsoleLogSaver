@@ -78,8 +78,8 @@ pub fn get_buffer(pid: lldb_pid_t) -> Result<Vec<u8>, ProcessRemoteError> {
     let update = update.expect("SceneTracker::Update symbol not found");
 
     let breakpoint = target.breakpoint_create_by_sbaddress(update);
-    breakpoint.set_enabled(true);
     breakpoint.set_oneshot(true);
+    breakpoint.set_enabled(true);
 
     process.continue_execution().unwrap();
     target.delete_breakpoint(breakpoint.id());

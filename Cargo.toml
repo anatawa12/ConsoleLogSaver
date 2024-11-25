@@ -9,6 +9,7 @@ byteorder = "1.5.0"
 lldb = { git = "https://github.com/endoli/lldb.rs.git", version = "0.0.11", rev = '87d7afc1bcf4da989bceac400c524e6dc0d69169' }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
+sysinfo = "0.32.0"
 tempfile = "3.14.0"
 thiserror = "2.0.3"
 uuid = { version = "1.11.0", features = ["v4"] }

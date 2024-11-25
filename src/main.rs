@@ -4,18 +4,66 @@ mod process_remote;
 use crate::cls_file::{ClsFileBuilder, ClsHeadingBuilder};
 use byteorder::{NativeEndian, ReadBytesExt};
 use serde::Deserialize;
-use std::env::args;
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
 
 fn main() {
-    let mut args = args();
+    let unity_processes = find_unity_processes();
 
-    let unity_pid = args
-        .nth(1)
-        .expect("please specify pid")
-        .parse::<process_remote::ProcessId>()
-        .expect("Failed to parse unity pid");
-
+    let unity_pid = unity_processes.first().unwrap().pid;
     print!("{}", run_console_log_saver(unity_pid));
+}
+
+struct UnityProcess {
+    pid: process_remote::ProcessId,
+    project_path: std::path::PathBuf,
+}
+
+fn find_unity_processes() -> Vec<UnityProcess> {
+    #[cfg(target_os = "macos")]
+    let exe_name: &std::path::Path = "Contents/MacOS/Unity".as_ref();
+    #[cfg(target_os = "windows")]
+    let exe_name: &std::path::Path = "Unity.exe".as_ref();
+    #[cfg(target_os = "linux")]
+    let exe_name: &std::path::Path = "Unity".as_ref();
+
+    let mut sysinfo = sysinfo::System::new();
+
+    sysinfo.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::new()
+            .with_cmd(UpdateKind::Always)
+            .with_exe(UpdateKind::Always),
+    );
+    sysinfo.refresh_processes(ProcessesToUpdate::All, true);
+
+    let mut unity_processes = Vec::new();
+    for (pid, proc) in sysinfo.processes() {
+        let Some(exe) = proc.exe() else { continue };
+        if !exe.ends_with(exe_name) {
+            continue;
+        }
+        let cmd = proc.cmd();
+        if cmd.iter().any(|x| x == "-srvPort") {
+            continue; // it looks asset importer worker
+        }
+        let Some(index) = cmd.iter().position(|x| x == "-projectPath") else {
+            continue;
+        };
+        let Some(project_path) = cmd.get(index) else {
+            continue;
+        };
+        let project_path = std::path::Path::new(project_path);
+
+        eprintln!("Process {}", pid);
+        eprintln!("Cmd: {:?}", project_path);
+        unity_processes.push(UnityProcess {
+            pid: pid.as_u32() as process_remote::ProcessId,
+            project_path: project_path.to_owned(),
+        })
+    }
+
+    unity_processes
 }
 
 fn run_console_log_saver(pid: process_remote::ProcessId) -> String {

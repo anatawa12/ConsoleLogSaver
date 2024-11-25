@@ -2,7 +2,7 @@
 
 set -eu
 
-LLVM_COMMIT="9152efbb912e341e112f369f5abedfa49e695fac"
+LLVM_COMMIT="6fde56c8d977c942ac8deb0af2f290c01c52052a"
 LLVM_ARCHIVE_URL="https://github.com/anatawa12/llvm-project/archive/${LLVM_COMMIT}.tar.gz"
 
 PROJECT_DIR="$(pwd)"

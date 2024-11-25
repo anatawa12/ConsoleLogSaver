@@ -592,19 +592,13 @@ ret_void"#
         "##
         ));
 
-        let mut reader = std::io::Cursor::new(&buffer);
-        let version: i32 = reader.read_i32::<NativeEndian>().unwrap();
+        let mut reader = TransferDataReader::new(buffer);
+        let version: i32 = reader.read_i32();
         if version == 1 {
-            let length: i32 = reader.read_i32::<NativeEndian>().unwrap();
-            for i in 0..length {
-                let char_length: i32 = reader.read_i32::<NativeEndian>().unwrap();
-                let mut buffer = vec![0u16; char_length as usize];
-                reader
-                    .read_u16_into::<NativeEndian>(buffer.as_mut_slice())
-                    .unwrap();
-                let log_message = String::from_utf16(&buffer).unwrap();
+            let length: i32 = reader.read_i32();
+            for _ in 0..length {
+                let log_message = reader.read_string();
                 cls_file_builder = cls_file_builder.add_content("log-element", &log_message);
-                //eprintln!("log message: of {i}\n{log_message}");
             }
         } else {
             eprintln!("version mismatch ({version})");
@@ -623,6 +617,31 @@ ret_void"#
     process.detach().unwrap();
 
     SBDebugger::terminate();
+}
+
+struct TransferDataReader {
+    reader: std::io::Cursor<Vec<u8>>,
+}
+
+impl TransferDataReader {
+    fn new(data: Vec<u8>) -> Self {
+        Self {
+            reader: std::io::Cursor::new(data),
+        }
+    }
+
+    fn read_i32(&mut self) -> i32 {
+        self.reader.read_i32::<NativeEndian>().unwrap()
+    }
+
+    fn read_string(&mut self) -> String {
+        let char_length = self.read_i32();
+        let mut buffer = vec![0u16; char_length as usize];
+        self.reader
+            .read_u16_into::<NativeEndian>(buffer.as_mut_slice())
+            .unwrap();
+        String::from_utf16(&buffer).expect("bad utf16 message")
+    }
 }
 
 struct LLDBContext<'a> {

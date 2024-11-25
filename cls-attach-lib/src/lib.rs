@@ -79,11 +79,57 @@ macro_rules! cs {
     };
 }
 
+struct TransferDataBuilder {
+    builder: Vec<u8>,
+}
+
+impl TransferDataBuilder {
+    fn new() -> Self {
+        let mut builder = Vec::new();
+        builder.extend_from_slice(&[0u8; 8]); // capacity space
+        builder.extend_from_slice(&[0u8; 8]); // length space
+        builder.extend_from_slice(&1i32.to_ne_bytes());
+        TransferDataBuilder { builder }
+    }
+
+    fn write_i32(&mut self, value: i32) {
+        self.builder.extend_from_slice(&value.to_ne_bytes());
+    }
+
+    fn write_string(&mut self, chars_slicee: &[u16]) {
+        self.write_i32(chars_slicee.len() as i32);
+        self.builder
+            .extend_from_slice(bytemuck::cast_slice(chars_slicee));
+    }
+
+    fn build_to_ptr(self) -> *mut u8 {
+        let capacity = self.builder.capacity();
+        let len = self.builder.len();
+        let leaked = self.builder.leak();
+        let result_data_length = (len - 8) as u64;
+        leaked[0..][..8].copy_from_slice(&(capacity as u64).to_ne_bytes());
+        leaked[8..][..8].copy_from_slice(&result_data_length.to_ne_bytes());
+
+        unsafe { leaked.as_mut_ptr().add(8) }
+    }
+
+    unsafe fn from_ptr(location: *mut u8) -> Self {
+        let vec_start = unsafe { location.sub(8) };
+        let capacity_len_buffer = unsafe { std::slice::from_raw_parts(vec_start, 16) };
+        let mut capacity_len = [0u64; 2];
+        bytemuck::cast_slice_mut(&mut capacity_len).copy_from_slice(capacity_len_buffer);
+
+        let capacity = capacity_len[0] as usize;
+        let len = capacity_len[1] as usize;
+
+        let vec = unsafe { Vec::from_raw_parts(vec_start, len, capacity) };
+        TransferDataBuilder { builder: vec }
+    }
+}
+
 #[no_mangle]
 extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
     unsafe {
-        let mut result_data = Vec::<u8>::with_capacity(1024 * 4);
-
         let domain = mono_domain_get();
         let assembly_name = mono_assembly_name_new(cs!("UnityEditor"));
         let assembly = mono_assembly_loaded(assembly_name);
@@ -125,10 +171,8 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         // int $line, $mode;
 
         // array size will be set to this place later
-        result_data.extend_from_slice(&[0u8; 8]); // capacity space
-        result_data.extend_from_slice(&[0u8; 8]);
-        result_data.extend_from_slice(&1i32.to_ne_bytes());
-        result_data.extend_from_slice(&count.to_ne_bytes());
+        let mut data_builder = TransferDataBuilder::new();
+        data_builder.write_i32(count);
 
         for mut index in 0..count {
             let mut message_obj: *mut MonoString = null_mut();
@@ -148,22 +192,13 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
             let length = mono_string_length(message_obj);
             let chars_ptr = mono_string_chars(message_obj);
             let chars_slice = std::slice::from_raw_parts(chars_ptr, length as usize);
-            result_data.extend_from_slice(&length.to_ne_bytes());
-            result_data.extend_from_slice(bytemuck::cast_slice(chars_slice));
+            data_builder.write_string(chars_slice);
         }
 
         mono_runtime_invoke(EndGettingEntries, null_mut(), null_mut(), null_mut());
 
-        // set byte length
-        let capacity = result_data.capacity();
-        let len = result_data.len();
-        let leaked = result_data.leak();
-        let result_data_length = (len - 8) as u64;
-        leaked[0..][..8].copy_from_slice(&(capacity as u64).to_ne_bytes());
-        leaked[8..][..8].copy_from_slice(&result_data_length.to_ne_bytes());
-
         // Note: RustRover would report error for this line but it's false positive
-        CONSOLE_LOG_SAVER_SAVED_LOCATION = leaked.as_mut_ptr().add(8);
+        CONSOLE_LOG_SAVER_SAVED_LOCATION = data_builder.build_to_ptr();
     }
 }
 
@@ -171,15 +206,6 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
 extern "C" fn CONSOLE_LOG_SAVER_FREE_MEM() {
     let location = unsafe { CONSOLE_LOG_SAVER_SAVED_LOCATION };
     if !location.is_null() {
-        let vec_start = unsafe { location.sub(8) };
-        let capacity_len_buffer = unsafe { std::slice::from_raw_parts(vec_start, 16) };
-        let mut capacity_len = [0u64; 2];
-        bytemuck::cast_slice_mut(&mut capacity_len).copy_from_slice(capacity_len_buffer);
-
-        let capacity = capacity_len[0] as usize;
-        let len = capacity_len[1] as usize;
-
-        let vec = unsafe { Vec::from_raw_parts(vec_start, len, capacity) };
-        drop(vec); // deallocate
+        drop(unsafe { TransferDataBuilder::from_ptr(location) });
     }
 }

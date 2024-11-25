@@ -7,7 +7,10 @@ impl ClsFileBuilder {
     pub fn new() -> ClsHeadingBuilder {
         let mut building = String::new();
         building.push_str("ConsoleLogSaverData/1.0\n");
-        let separator = format!("================{}================", uuid::Uuid::new_v4().simple());
+        let separator = format!(
+            "================{}================",
+            uuid::Uuid::new_v4().simple()
+        );
         building.push_str("Separator: ");
         building.push_str(&separator);
         building.push_str("\n");

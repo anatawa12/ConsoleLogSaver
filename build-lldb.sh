@@ -37,8 +37,6 @@ if [ -f "$EXTRACT_PROGRESS_FILE" ] || [ ! -d "$LLVM_SRC_DIR/cmake" ] || [ ! -d "
   tar --strip-components=1 -x -z -f "$LLVM_LOCAL_TAR_GZ" -C "$LLVM_SRC_DIR" "$TAR_PREFIX/cmake/" "$TAR_PREFIX/llvm/" "$TAR_PREFIX/lldb/"
 
   rm -f "$EXTRACT_PROGRESS_FILE"
-  # remove build dir to ensure rebuild
-  rm -rf "$LLVM_BUILD_DIR"
 fi
 
 #CMAKE_BUILD_TYPE=Debug

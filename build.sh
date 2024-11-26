@@ -92,6 +92,7 @@ mkdir -p "$BUILD_TMP_DIR"
 
 # general global variable
 
+CARGO_FLAGS=
 case ${OS} in
   macos)
     LIB_PREFIX=lib
@@ -104,6 +105,7 @@ case ${OS} in
   windows)
     LIB_PREFIX=
     DYLIB_SUFFIX=.dll
+    CARGO_FLAGS="$CARGO_FLAGS -C target-feature=+crt-static"
 esac
 
 if [ "$OS" = "macos" ] || [ "$OS" = "linux" ]; then
@@ -121,7 +123,8 @@ fi
 
 CLS_ATTACH_LIB_NAME="${LIB_PREFIX}cls_attach_lib${DYLIB_SUFFIX}"
 echo "building ${CLS_ATTACH_LIB_NAME}..."
-CLS_MONO_PATH="$BUILD_TMP_DIR/mono" cargo build $CARGO_PROFILE_ARG -p cls-attach-lib
+# shellcheck disable=SC2086
+CLS_MONO_PATH="$BUILD_TMP_DIR/mono" cargo build $CARGO_PROFILE_ARG $CARGO_FLAGS -p cls-attach-lib
 CLS_ATTACH_LIB_PATH="$CARGO_BUILT_DIR/$CLS_ATTACH_LIB_NAME"
 
 if [ "$OS" = "macos" ]; then
@@ -162,4 +165,5 @@ export LLDB_SYS_CFLAGS='-DLLDB_API='
 export CLS_ATTACH_LIB_PATH
 
 echo "building main crate"
-cargo build $CARGO_PROFILE_ARG -p console-log-saver --features ""
+# shellcheck disable=SC2086
+cargo build $CARGO_PROFILE_ARG $CARGO_FLAGS -p console-log-saver --features ""

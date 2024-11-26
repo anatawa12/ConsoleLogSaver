@@ -54,6 +54,19 @@ case $(uname) in
   MINGW* )
     TARGET_ARCH='X86'
     BUILD_TARGETS='liblldb'
+
+    # find msvc path
+    PROGRAM_FILES_X86="$(perl -E 'say $ENV{"ProgramFiles(x86)"}')"
+    PROGRAM_FILES_X86=${PROGRAM_FILES_X86:-$ProgramFiles}
+    PROGRAM_FILES_X86="$(cygpath "$PROGRAM_FILES_X86")"
+    VSWHERE="$PROGRAM_FILES_X86/Microsoft Visual Studio/Installer/vswhere.exe"
+    
+    INSTALL_PATH="$("$VSWHERE" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format text -nologo | grep 'installationPath' | sed 's/[^:]*: //')"
+    DEFAULT_MSVC_VERSION="$(cat "$INSTALL_PATH/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt")"
+    MSVC_PATH="$INSTALL_PATH/VC/Tools/MSVC/$DEFAULT_MSVC_VERSION/bin/HostX64/x64"
+
+    export PATH="$PATH:$(cygpath "$MSVC_PATH")"
+
     ;;
   * )
     echo "Unsupported platform" >&2;

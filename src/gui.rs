@@ -154,6 +154,7 @@ impl eframe::App for ConsoleLogSaverGui {
                                 egui::Spinner::new()
                                     .ui(ui);
                                 ui.label("Fetching Log...");
+                                ui.label("This may take several tens of seconds...");
                             });
                         }
                     }

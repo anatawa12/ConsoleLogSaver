@@ -168,4 +168,4 @@ export CLS_ATTACH_LIB_PATH
 
 echo "building main crate"
 # shellcheck disable=SC2086
-cargo build $CARGO_PROFILE_ARG -p console-log-saver --features ""
+cargo build $CARGO_PROFILE_ARG -p console-log-saver --features "$CARGO_FEATURES"

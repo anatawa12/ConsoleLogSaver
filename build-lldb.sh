@@ -99,7 +99,7 @@ if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ]; then
     -B "$LLVM_BUILD_DIR" \
     -G Ninja \
     -D CMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
-    -D MSVC_RUNTIME_LIBRARY=MultiThreaded \
+    -D CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded \
     -D LLVM_ENABLE_PROJECTS=lldb \
     -D LLVM_TARGETS_TO_BUILD="$TARGET_ARCH" \
     -D LLVM_ENABLE_ZLIB=OFF \

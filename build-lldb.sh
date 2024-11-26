@@ -60,12 +60,32 @@ case $(uname) in
     PROGRAM_FILES_X86=${PROGRAM_FILES_X86:-$ProgramFiles}
     PROGRAM_FILES_X86="$(cygpath "$PROGRAM_FILES_X86")"
     VSWHERE="$PROGRAM_FILES_X86/Microsoft Visual Studio/Installer/vswhere.exe"
-    
-    INSTALL_PATH="$("$VSWHERE" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format text -nologo | grep 'installationPath' | sed 's/[^:]*: //')"
-    DEFAULT_MSVC_VERSION="$(cat "$INSTALL_PATH/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt")"
-    MSVC_PATH="$INSTALL_PATH/VC/Tools/MSVC/$DEFAULT_MSVC_VERSION/bin/HostX64/x64"
 
-    export PATH="$PATH:$(cygpath "$MSVC_PATH")"
+    VISUAL_STUDI_INSTALL_PATH="$("$VSWHERE" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format text -nologo | grep 'installationPath' | sed 's/[^:]*: //')"
+    DEFAULT_MSVC_VERSION="$(cat "$VISUAL_STUDI_INSTALL_PATH/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt")"
+    MSVC_DIR="$VISUAL_STUDI_INSTALL_PATH/VC/Tools/MSVC/$DEFAULT_MSVC_VERSION"
+    MSVC_PATH="$MSVC_DIR/bin/HostX64/x64"
+    MSVC_LIB="$MSVC_DIR/lib/x64"
+    MSVC_INCLUDE="$MSVC_DIR/include"
+
+    WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")" 
+    for WINDOWS_KIT_VERSION_BIN in "$WINDOWS_KIT_ROOT"/bin/* ; do
+        if [ -f "$WINDOWS_KIT_VERSION_BIN"/x64/rc.exe ]; then
+          WINDOWS_KIT_VERSION="${WINDOWS_KIT_VERSION_BIN##*/}"
+          WINDOWS_KIT_BIN="$WINDOWS_KIT_VERSION_BIN"/x64
+          WINDOWS_KIT_UCRT_LIB="$WINDOWS_KIT_ROOT/lib/$WINDOWS_KIT_VERSION/ucrt/x64"
+          WINDOWS_KIT_UM_LIB="$WINDOWS_KIT_ROOT/lib/$WINDOWS_KIT_VERSION/um/x64"
+          WINDOWS_KIT_UCRT_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/ucrt"
+          WINDOWS_KIT_UM_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/um"
+          WINDOWS_KIT_SHARED_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/shared"
+          echo "$WINDOWS_KIT_UM_LIB"
+          break
+        fi
+    done
+
+    export PATH="$PATH:$(cygpath "$MSVC_PATH"):$(cygpath "$WINDOWS_KIT_BIN")"
+    export LIB="$(cygpath -wp "$WINDOWS_KIT_UCRT_LIB:$WINDOWS_KIT_UM_LIB:$MSVC_LIB")"
+    export INCLUDE="$(cygpath -wp "$WINDOWS_KIT_UCRT_INCLUDE:$WINDOWS_KIT_UM_INCLUDE:$WINDOWS_KIT_SHARED_INCLUDE:$MSVC_INCLUDE")"
 
     ;;
   * )

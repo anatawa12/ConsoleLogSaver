@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use console_log_saver::*;
 use eframe::egui;
 use eframe::egui::{FontData, FontTweak, Widget};

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused)]
 
 use crate::process_remote::base_err;
 use lldb::{lldb_addr_t, Permissions, SBFrame, SBProcess};

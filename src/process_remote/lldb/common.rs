@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use lldb::{lldb_addr_t, FunctionNameType, SBFileSpec, SBProcess, SymbolType};
-use std::convert::Infallible;
+use crate::process_remote::base_err;
+use crate::Result;
+use lldb::{lldb_addr_t, SBFileSpec, SBModule, SBProcess, SBTarget, SymbolType};
 use tempfile::TempPath;
 
 pub struct LoadImageResult {
@@ -26,53 +27,49 @@ impl LoadImageResult {
     }
 
     pub fn unload(self) {
-        self.process
-            .unload_image(self.image_token)
-            .expect("unloading image");
+        self.process.unload_image(self.image_token).ok();
     }
 }
 
-pub fn load_image(
-    process: &SBProcess,
-    load_path: &std::path::Path,
-) -> Result<LoadImageResult, Infallible> {
+pub fn load_image(process: &SBProcess, load_path: &std::path::Path) -> Result<LoadImageResult> {
     // on windows, we can find_module for modules we just loaded, so we use
-    let target = process.target().unwrap();
+    let target = process.target().ok_or(base_err("No target for process"))?;
 
-    let path = load_path.to_str().unwrap();
+    let path = load_path.to_str().ok_or(base_err("bad load_path"))?;
     let dylib = SBFileSpec::from_path(path, true);
-    let image_token = process.load_image(&dylib).expect("loading image");
+    let image_token = process
+        .load_image(&dylib)
+        .map_err(|x| base_err(format!("failed to load image: {x:?}")))?;
 
     // not working on posix (at least macos)
-    let dylib = target.find_module(&dylib).expect("loaded dylib not found");
+    let Some(dylib) = target.find_module(&dylib) else {
+        process.unload_image(image_token).ok();
+        return Err(base_err("loaded module not found"));
+    };
 
-    let saver_save = dylib
-        .find_functions("CONSOLE_LOG_SAVER_SAVE", FunctionNameType::AUTO.bits())
-        .iter()
-        .nth(0)
-        .unwrap()
-        .symbol()
-        .start_address()
-        .unwrap()
-        .load_address(&target);
-    let free_mem = dylib
-        .find_functions("CONSOLE_LOG_SAVER_FREE_MEM", FunctionNameType::AUTO.bits())
-        .iter()
-        .nth(0)
-        .unwrap()
-        .symbol()
-        .start_address()
-        .unwrap()
-        .load_address(&target);
-    let location = dylib
-        .find_symbols("CONSOLE_LOG_SAVER_SAVED_LOCATION", SymbolType::Data)
-        .iter()
-        .nth(0)
-        .unwrap()
-        .symbol()
-        .start_address()
-        .unwrap()
-        .load_address(&target);
+    fn find(module: &SBModule, target: &SBTarget, name: &str) -> Option<lldb_addr_t> {
+        module
+            .find_symbols(name, SymbolType::Any)
+            .iter()
+            .nth(0)
+            .and_then(|x| x.symbol().start_address())
+            .map(|x| x.load_address(target))
+    }
+
+    let Some(saver_save) = find(&dylib, &target, "CONSOLE_LOG_SAVER_SAVE") else {
+        process.unload_image(image_token).ok();
+        return Err(base_err("save symbol not found"));
+    };
+
+    let Some(free_mem) = find(&dylib, &target, "CONSOLE_LOG_SAVER_FREE_MEM") else {
+        process.unload_image(image_token).ok();
+        return Err(base_err("free_mem symbol not found"));
+    };
+
+    let Some(location) = find(&dylib, &target, "CONSOLE_LOG_SAVER_SAVED_LOCATION") else {
+        process.unload_image(image_token).ok();
+        return Err(base_err("location symbol not found"));
+    };
 
     let process = process.clone();
     Ok(LoadImageResult {
@@ -84,6 +81,6 @@ pub fn load_image(
     })
 }
 
-pub fn prepare_debug_server() -> Option<TempPath> {
-    None
+pub fn prepare_debug_server() -> crate::Result<Option<TempPath>> {
+    Ok(None)
 }

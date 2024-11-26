@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
+use crate::process_remote::base_err;
 use lldb::{lldb_addr_t, Permissions, SBFrame, SBProcess};
-use std::convert::Infallible;
 use std::ffi::CStr;
 use std::io::Write;
+use std::mem::forget;
 use tempfile::TempPath;
 
 pub struct LoadImageResult {
@@ -50,11 +51,15 @@ ret_void"#
 pub fn load_image(
     process: &SBProcess,
     load_path: &std::path::Path,
-) -> Result<LoadImageResult, Infallible> {
+) -> crate::Result<LoadImageResult> {
     use std::os::unix::ffi::OsStrExt;
     // on unix, we cannot find_module for modules we just loaded,
     // so we use directly calling dlopen
-    let frame = process.selected_thread().frames().nth(0).unwrap();
+    let frame = process
+        .selected_thread()
+        .frames()
+        .nth(0)
+        .ok_or_else(|| base_err("no thread available"))?;
 
     /*
      C-like expression:
@@ -129,24 +134,33 @@ pub fn load_image(
             + (location_name.len() + 1),
     );
     buffer.extend_from_slice(&[0u8; STRUCT_DATA_SIZE]);
-    let mut buffer_writer = std::io::Cursor::new(&mut buffer);
 
-    fn write_get_ptr(writer: &mut std::io::Cursor<&mut Vec<u8>>, data: &[u8]) -> u64 {
-        let offset = writer.position();
-        writer.write_all(data).unwrap();
-        writer.write_all(b"\0").unwrap();
+    fn write_get_ptr(writer: &mut Vec<u8>, data: &[u8]) -> u64 {
+        let offset = writer.len() as u64;
+        writer.extend_from_slice(data);
+        writer.extend_from_slice(b"\0");
         offset
     }
 
-    buffer_writer.set_position(STRUCT_DATA_SIZE as u64);
-    let load_path_offset = write_get_ptr(&mut buffer_writer, &load_path.as_os_str().as_bytes());
-    let saver_save_name_offset = write_get_ptr(&mut buffer_writer, &saver_save_name.as_bytes());
-    let free_mem_name_offset = write_get_ptr(&mut buffer_writer, &free_mem_name.as_bytes());
-    let location_name_offset = write_get_ptr(&mut buffer_writer, &location_name.as_bytes());
+    let load_path_offset = write_get_ptr(&mut buffer, &load_path.as_os_str().as_bytes());
+    let saver_save_name_offset = write_get_ptr(&mut buffer, &saver_save_name.as_bytes());
+    let free_mem_name_offset = write_get_ptr(&mut buffer, &free_mem_name.as_bytes());
+    let location_name_offset = write_get_ptr(&mut buffer, &location_name.as_bytes());
 
     let buffer_location = process
         .allocate_memory(buffer.len(), Permissions::READABLE | Permissions::WRITABLE)
-        .expect("allocating memory");
+        .map_err(|x| base_err(format_args!("allocate buffer: {x:?}")))?;
+
+    struct Deallocator<'a>(&'a SBProcess, lldb_addr_t);
+    impl Drop for Deallocator<'_> {
+        fn drop(&mut self) {
+            unsafe {
+                self.0.deallocate_memory(self.1).ok();
+            }
+        }
+    }
+
+    let deallocator = Deallocator(process, saver_save_name_offset);
 
     fn set_usize(buffer: &mut Vec<u8>, index: usize, value: usize) {
         let offset = index * size_of::<usize>();
@@ -176,7 +190,7 @@ pub fn load_image(
 
     process
         .write_memory(buffer_location, &buffer)
-        .expect("writing memory");
+        .map_err(|x| base_err(format_args!("writing data to buffer: {x:?}")))?;
     drop(buffer);
 
     let error_block = 4;
@@ -286,14 +300,17 @@ begin_block 8 # ok_block
 "#
     );
 
-    super::eval_expr(&frame, &expression).expect("loading memory");
+    super::eval_expr(&frame, &expression)
+        .map_err(|x| base_err(format_args!("loading library: {x:?}")))?;
 
     let mut read_buffer = [0usize; INOUT_ELEMENT_COUNT];
     process
         .read_memory(buffer_location, bytemuck::cast_slice_mut(&mut read_buffer))
-        .expect("reading memory");
+        .map_err(|x| base_err(format_args!("reading memory: {x:?}")))?;
 
-    unsafe { process.deallocate_memory(buffer_location) }.expect("deallocating memory");
+    forget(deallocator);
+    unsafe { process.deallocate_memory(buffer_location) }
+        .map_err(|x| base_err(format_args!("deallocating memory: {x:?}")))?;
 
     let handle = read_buffer[handle_idx];
     let saver_save = read_buffer[saver_save_idx] as lldb_addr_t;
@@ -302,20 +319,25 @@ begin_block 8 # ok_block
     let error = read_buffer[error_idx];
 
     if error != 0 || handle == 0 || saver_save == 0 || location == 0 {
-        if error != 0 {
+        return if error != 0 {
             // there is error message from dlerror
             let error_len = read_buffer[error_len_idx];
             let mut error_buffer = vec![0u8; error_len + 1];
-            process
+            if let Some(message) = process
                 .read_memory(error as lldb_addr_t, &mut error_buffer)
-                .expect("reading error message");
-            let error_message =
-                CStr::from_bytes_with_nul(&error_buffer).expect("bad error msssage");
-            let message = error_message.to_str().expect("bad utf8 message");
-            panic!("dlopen or dlsym failed with error: {message}")
+                .ok()
+                .and_then(|()| CStr::from_bytes_with_nul(&error_buffer).ok())
+                .and_then(|x| x.to_str().ok())
+            {
+                Err(base_err(format_args!(
+                    "dlopen or dlsym failed with error: {message}"
+                )))
+            } else {
+                Err(base_err("dlopen or dlsym failed with unknown error"))
+            }
         } else {
-            panic!("dlopen or dlsym failed with unknown error")
-        }
+            Err(base_err("dlopen or dlsym failed with unknown error"))
+        };
     }
 
     Ok(LoadImageResult {
@@ -328,32 +350,32 @@ begin_block 8 # ok_block
 }
 
 #[cfg(all(unix, not(feature = "external_debug_server")))]
-pub fn prepare_debug_server() -> Option<TempPath> {
+pub fn prepare_debug_server() -> crate::Result<Option<TempPath>> {
     use std::os::unix::fs::PermissionsExt;
 
     let mut debugserver = tempfile::Builder::new()
         .prefix("cls-lldb-debugserver")
         .suffix(".exe")
         .tempfile()
-        .expect("failed to create temporary file");
+        .map_err(|x| base_err(format_args!("creating debug server: {x:?}")))?;
 
     debugserver
         .as_file_mut()
         .set_permissions(std::fs::Permissions::from_mode(0o755))
-        .expect("failed to set permissions");
+        .map_err(|x| base_err(format_args!("setting permission for debug server: {x:?}")))?;
     debugserver
         .write_all(include_bytes!(env!("LLDB_BUNDLE_DEBUGSERVER_PATH")))
-        .expect("creating debugserver failed");
+        .map_err(|x| base_err(format_args!("writing debug server: {x:?}")))?;
 
     unsafe {
         std::env::set_var("LLDB_DEBUGSERVER_PATH", debugserver.path());
     }
 
-    Some(debugserver.into_temp_path())
+    Ok(Some(debugserver.into_temp_path()))
 }
 
 #[cfg(all(unix, feature = "external_debug_server"))]
-pub fn prepare_debug_server() -> Option<TempPath> {
+pub fn prepare_debug_server() -> crate::Result<Option<TempPath>> {
     let debugserver = env!("LLDB_REFERENCE_DEBUGSERVER_PATH");
 
     if let Some(relative_path) = debugserver.strip_prefix("@executable/") {
@@ -369,5 +391,5 @@ pub fn prepare_debug_server() -> Option<TempPath> {
         }
     }
 
-    None
+    Ok(None)
 }

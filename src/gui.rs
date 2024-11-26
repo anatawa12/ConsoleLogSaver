@@ -2,6 +2,7 @@ use console_log_saver::*;
 use eframe::egui;
 use eframe::egui::{FontData, FontTweak, Widget};
 use egui_extras::Column;
+use std::result::Result;
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -132,7 +133,7 @@ struct ConsoleLogSaverGui {
     unity_process: Vec<UnityProcess>,
     selected_pid: Option<ProcessId>,
     config: ConsoleLogSaverConfig,
-    cls_thread: Option<std::thread::JoinHandle<()>>,
+    cls_thread: Option<std::thread::JoinHandle<Result<(), String>>>,
     to_copy: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     locale: SupportedLocale,
 }
@@ -260,8 +261,11 @@ impl eframe::App for ConsoleLogSaverGui {
                         self.cls_thread = Some(
                             std::thread::Builder::new()
                                 .spawn(move || {
-                                    let result = run_console_log_saver(pid, &config);
-                                    std::fs::write(path, result).expect("TODO: error handling");
+                                    let log = run_console_log_saver(pid, &config)
+                                        .map_err(|x| x.to_string())?;
+                                    std::fs::write(path, log)
+                                        .map_err(|x| format!("failed to save file: {}", x))?;
+                                    Ok(())
                                 })
                                 .expect("TODO: error handling"),
                         );
@@ -275,8 +279,10 @@ impl eframe::App for ConsoleLogSaverGui {
                     self.cls_thread = Some(
                         std::thread::Builder::new()
                             .spawn(move || {
-                                let result = run_console_log_saver(pid, &config);
-                                clipboard_arc.lock().unwrap().replace(result);
+                                let log = run_console_log_saver(pid, &config)
+                                    .map_err(|x| x.to_string())?;
+                                clipboard_arc.lock().unwrap().replace(log);
+                                Ok(())
                             })
                             .expect("TODO: error handling"),
                     );

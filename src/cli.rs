@@ -73,7 +73,10 @@ fn main() {
     }
 
     let pid = pid.unwrap();
-    print!("{}", run_console_log_saver(pid, &settings));
+    match run_console_log_saver(pid, &settings) {
+        Ok(log) => print!("{log}"),
+        Err(err) => eprintln!("failed to run console log: {err}"),
+    }
 }
 
 fn print_processes() {

@@ -2,6 +2,9 @@ mod cls_file;
 mod process_remote;
 
 use crate::cls_file::{ClsFileBuilder, ClsHeadingBuilder};
+pub use crate::process_remote::ProcessId;
+use crate::process_remote::ProcessRemoteError::NonUtf8LogContents;
+use crate::process_remote::{base_err, ProcessRemoteError};
 use byteorder::{NativeEndian, ReadBytesExt};
 use regex::Regex;
 use serde::Deserialize;
@@ -9,8 +12,6 @@ use std::borrow::Cow;
 use std::ops::Deref;
 use std::path::Component;
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
-
-pub use crate::process_remote::ProcessId;
 
 pub struct UnityProcess {
     pid: ProcessId,
@@ -211,16 +212,18 @@ impl ReplaceSet {
     }
 }
 
-pub fn run_console_log_saver(pid: ProcessId, config: &ConsoleLogSaverConfig) -> String {
-    let buffer = process_remote::get_buffer(pid).expect("Failed to get buffer");
+pub type Result<T> = std::result::Result<T, ProcessRemoteError>;
+
+pub fn run_console_log_saver(pid: ProcessId, config: &ConsoleLogSaverConfig) -> Result<String> {
+    let buffer = process_remote::get_buffer(pid)?;
 
     let replacer = ReplaceSet::new(&config);
 
     let mut reader = TransferDataReader::new(buffer);
 
-    let version: i32 = reader.read_i32();
+    let version = reader.read_i32()?;
     if version != 1 {
-        panic!("version mismatch ({version})");
+        return Err(base_err("corrupted data"));
     }
 
     let mut cls_file_builder = ClsFileBuilder::new();
@@ -233,11 +236,11 @@ pub fn run_console_log_saver(pid: ProcessId, config: &ConsoleLogSaverConfig) -> 
         ),
     );
 
-    let unity_version = reader.read_string();
+    let unity_version = reader.read_string()?;
     cls_file_builder.add_header("Unity-Version", &unity_version);
 
+    let os_description = reader.read_string()?;
     if !config.hide_os_info {
-        let os_description = reader.read_string();
         cls_file_builder.add_header("Editor-Platform", &os_description);
     }
 
@@ -256,20 +259,20 @@ pub fn run_console_log_saver(pid: ProcessId, config: &ConsoleLogSaverConfig) -> 
         cls_file_builder.add_header("Hidden-Data", "signature-param");
     }
 
-    let build_target = reader.read_string();
+    let build_target = reader.read_string()?;
     cls_file_builder.add_header("Build-Target", &build_target);
 
-    let current_directory = reader.read_string();
+    let current_directory = reader.read_string()?;
 
     append_upm(&mut cls_file_builder, &current_directory, &replacer);
     append_vpm(&mut cls_file_builder, &current_directory);
 
     let mut cls_file_builder = cls_file_builder.begin_body();
 
-    let length: i32 = reader.read_i32();
+    let length: i32 = reader.read_i32()?;
     for _ in 0..length {
-        let log_message = reader.read_string();
-        let mode = reader.read_i32();
+        let log_message = reader.read_string()?;
+        let mode = reader.read_i32()?;
         cls_file_builder.add_header("Mode", &format!("{mode}")); // TODO: transfer to name
         cls_file_builder.add_header("Mode-Raw", &format!("{mode:08x}"));
         cls_file_builder.add_content(
@@ -278,7 +281,7 @@ pub fn run_console_log_saver(pid: ProcessId, config: &ConsoleLogSaverConfig) -> 
         );
     }
 
-    cls_file_builder.build()
+    Ok(cls_file_builder.build())
 }
 
 struct TransferDataReader {
@@ -292,17 +295,19 @@ impl TransferDataReader {
         }
     }
 
-    fn read_i32(&mut self) -> i32 {
-        self.reader.read_i32::<NativeEndian>().unwrap()
+    fn read_i32(&mut self) -> Result<i32> {
+        self.reader
+            .read_i32::<NativeEndian>()
+            .map_err(|_| base_err("failed to read i32"))
     }
 
-    fn read_string(&mut self) -> String {
-        let char_length = self.read_i32();
+    fn read_string(&mut self) -> Result<String> {
+        let char_length = self.read_i32()?;
         let mut buffer = vec![0u16; char_length as usize];
         self.reader
             .read_u16_into::<NativeEndian>(buffer.as_mut_slice())
-            .unwrap();
-        String::from_utf16(&buffer).expect("bad utf16 message")
+            .map_err(|_| base_err("failed to read string"))?;
+        String::from_utf16(&buffer).map_err(|_| NonUtf8LogContents)
     }
 }
 

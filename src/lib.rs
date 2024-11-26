@@ -74,6 +74,7 @@ pub fn find_unity_processes() -> Vec<UnityProcess> {
 }
 
 #[non_exhaustive]
+#[derive(Debug, Clone)]
 pub struct ConsoleLogSaverConfig {
     pub hide_user_name: bool,
     pub hide_user_home: bool,
@@ -126,8 +127,6 @@ impl ReplaceSet {
                         Component::ParentDir => panic!("should not happen"),
                     }
                 }
-
-                eprintln!("{}", regex);
 
                 regex::RegexBuilder::new(&regex)
                     .case_insensitive(true)

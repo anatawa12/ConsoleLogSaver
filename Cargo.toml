@@ -16,13 +16,22 @@ uuid = { version = "1.11.0", features = ["v4"] }
 regex = "1.11.1"
 whoami = { version = "1.5.2", default-features = false }
 home = "0.5.9"
+eframe = { version = "0.29.1", optional = true }
+egui_extras = { version = "0.29.1", optional = true }
+rfd = { version = "0.15.1", optional = true }
 
 [[bin]]
 name = "ConsoleLogSaverCli"
 path = "src/cli.rs"
 
+[[bin]]
+name = "ConsoleLogSaverGui"
+path = "src/gui.rs"
+required-features = ['gui']
+
 [features]
 external_debug_server = []
+gui = [ "dep:eframe", "dep:egui_extras", "dep:rfd" ]
 
 [workspace]
 members = [

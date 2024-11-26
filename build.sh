@@ -7,6 +7,7 @@ PROJECT_DIR="$(pwd)"
 # input variables
 BUILD_RELEASE=false
 LLDB_BUILD_DIR="$PROJECT_DIR/llvm/build"
+ENABLE_GUI=true
 
 while [ "$#" != 0 ]; do
     case "$1" in
@@ -17,6 +18,14 @@ while [ "$#" != 0 ]; do
           exit 1
         fi
         LLDB_BUILD_DIR="$(realpath "$1")"
+        shift
+        ;;
+      --enable-gui)
+        ENABLE_GUI=true
+        shift
+        ;;
+      --disable-gui)
+        ENABLE_GUI=false
         shift
         ;;
       *)
@@ -36,6 +45,12 @@ if [ ! -d "$LLDB_BUILD_DIR" ]; then
 fi
 
 set -eu
+
+CARGO_FEATURES=""
+
+if [ "$ENABLE_GUI" = true ]; then
+  CARGO_FEATURES="$CARGO_FEATURES,gui"
+fi
 
 case $(uname) in
   Darwin*)
@@ -147,4 +162,4 @@ export LLDB_SYS_CFLAGS='-DLLDB_API='
 export CLS_ATTACH_LIB_PATH
 
 echo "building main crate"
-cargo build $CARGO_PROFILE_ARG -p console-log-saver
+cargo build $CARGO_PROFILE_ARG -p console-log-saver --features ""

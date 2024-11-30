@@ -46,14 +46,20 @@ case $(uname) in
   Darwin*)
     TARGET_ARCH='AArch64;X86'
     BUILD_TARGETS='debugserver liblldb'
+    lib_prefix=lib
+    lib_suffix=.a
     ;;
   Linux*)
     TARGET_ARCH='X86'
     BUILD_TARGETS='debugserver liblldb'
+    lib_prefix=lib
+    lib_suffix=.a
     ;;
   MINGW* )
     TARGET_ARCH='X86'
     BUILD_TARGETS='liblldb'
+    lib_prefix=
+    lib_suffix=.lib
 
     # find msvc path
     PROGRAM_FILES_X86="$(perl -E 'say $ENV{"ProgramFiles(x86)"}')"
@@ -93,9 +99,12 @@ case $(uname) in
     exit 1;
 esac
 
-current_build_config_version="$(cat "$LLVM_BUILD_DIR/.build-config-version")"
+build_config_files="$LLVM_BUILD_DIR/.build-config-version"
+current_build_config_version="$(cat "$build_config_files" || :)"
 
 if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ] || [ "$current_build_config_version" != "$BUILD_CONFIG_VERSION" ]; then
+  echo "configuration llvm" >&2
+
   cmake \
     -S "$LLVM_SRC_DIR/llvm" \
     -B "$LLVM_BUILD_DIR" \
@@ -117,6 +126,31 @@ if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ] || [ "$current_build_config_version" !
     -D LLDB_ENABLE_LUA=OFF \
     -D LLDB_INCLUDE_TESTS=OFF \
 
+  echo "$BUILD_CONFIG_VERSION" > "$build_config_files"
 fi
 
+echo "building llvm" >&2
+
 ninja -C "$LLVM_BUILD_DIR" $BUILD_TARGETS
+
+echo "installing header files" >&2
+cmake_install_headers() {
+  cmake \
+    -DCMAKE_INSTALL_PREFIX="$LLVM_DIR" \
+    -DCMAKE_INSTALL_LOCAL_ONLY=YES \
+    -DCMAKE_INSTALL_COMPONENT="$1" \
+    -P "$2"
+}
+
+cmake_install_headers llvm-headers "$LLVM_BUILD_DIR/cmake_install.cmake" > /dev/null
+cmake_install_headers lldb-headers "$LLVM_BUILD_DIR/tools/lldb/cmake_install.cmake" > /dev/null
+
+echo "installing library / binary files" >&2
+
+lib_dir="$LLVM_DIR/lib"
+mkdir -p "$LLVM_DIR/lib"
+find "$LLVM_BUILD_DIR/lib" -depth 1 -type f ! -name '*.cmake' -exec cp '{}' "$lib_dir" ";"
+if [ -f "$LLVM_BUILD_DIR/bin/debugserver" ]; then
+  mkdir -p "$LLVM_DIR/bin"
+  cp "$LLVM_BUILD_DIR/bin/debugserver" "$LLVM_DIR/bin"
+fi

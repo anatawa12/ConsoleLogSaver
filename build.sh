@@ -6,18 +6,38 @@ PROJECT_DIR="$(pwd)"
 
 # input variables
 BUILD_RELEASE=false
-LLDB_BUILD_DIR="$PROJECT_DIR/llvm/build"
+LLDB_LIB_DIR=${LLDB_LIB_DIR:-"$PROJECT_DIR/llvm/lib"}
+LLDB_INCLUDE_DIR=${LLDB_INCLUDE_DIR:-"$PROJECT_DIR/llvm/include"}
+LLDB_DEBUGSERVER_PATH=${LLDB_DEBUGSERVER_PATH:-"$PROJECT_DIR/llvm/bin/debugserver"}
 ENABLE_GUI=true
 
 while [ "$#" != 0 ]; do
     case "$1" in
-      -l|--lldb-build-dir)
+      --lldb-lib-dir)
         shift
         if [ "$#" = 0 ]; then
-          echo "not arg platform -l or --lldb-build-dir" >&2
+          echo "no arg for --lldb-build-dir" >&2
           exit 1
         fi
-        LLDB_BUILD_DIR="$(realpath "$1")"
+        LLDB_LIB_DIR="$(realpath "$1")"
+        shift
+        ;;
+      --lldb-include-dir)
+        shift
+        if [ "$#" = 0 ]; then
+          echo "no arg for --lldb-include-dir" >&2
+          exit 1
+        fi
+        LLDB_INCLUDE_DIR="$(realpath "$1")"
+        shift
+        ;;
+      --debugserver-path)
+        shift
+        if [ "$#" = 0 ]; then
+          echo "no arg for --debugserver-path" >&2
+          exit 1
+        fi
+        LLDB_DEBUGSERVER_PATH="$(realpath "$1")"
         shift
         ;;
       --enable-gui)
@@ -34,13 +54,8 @@ while [ "$#" != 0 ]; do
     esac
 done
 
-if [ -z "$LLDB_BUILD_DIR" ]; then
-  echo "-l or --lldb-build-dir not specified" >&2
-  exit 1
-fi
-
-if [ ! -d "$LLDB_BUILD_DIR" ]; then
-  echo "LLDB_BUILD_DIR not found." >&2
+if [ ! -d "$LLDB_LIB_DIR" ]; then
+  echo "LLDB_LIB_DIR not found." >&2
   exit 1
 fi
 
@@ -136,31 +151,13 @@ if [ "$OS" = "macos" ]; then
   install_name_tool -change "$BUILT_BINARY_NAME" "$UNITY_MONO_LIB_PATH" "$CLS_ATTACH_LIB_PATH"
 fi
 
-if [ -z "${LLDB_INCLUDE_DIRS:-}" ]; then
-  echo "installing header files for llvm"
-  LLVM_PREFIX="$BUILD_TMP_DIR/llvm"
-  cmake_install_headers() {
-    cmake \
-      -DCMAKE_INSTALL_PREFIX="$LLVM_PREFIX" \
-      -DCMAKE_INSTALL_LOCAL_ONLY=YES \
-      -DCMAKE_INSTALL_COMPONENT="$1" \
-      -P "$2"
-  }
+LLDB_INCLUDE_DIRS="$LLDB_INCLUDE_DIR:${LLDB_INCLUDE_DIRS:-}"
+export LLDB_INCLUDE_DIRS
 
-  cmake_install_headers llvm-headers "$LLDB_BUILD_DIR/cmake_install.cmake" > /dev/null
-  cmake_install_headers lldb-headers "$LLDB_BUILD_DIR/tools/lldb/cmake_install.cmake" > /dev/null
-
-  LLDB_INCLUDE_DIRS="$LLVM_PREFIX/include"
-  export LLDB_INCLUDE_DIRS
-fi
-
-if [ -z "${LLDB_LIB_DIR:-}" ]; then
-  LLDB_LIB_DIR="$LLDB_BUILD_DIR/lib"
-  export LLDB_LIB_DIR
-fi
+export LLDB_LIB_DIR
 
 if [ "$OS" = "macos" ] || [ "$OS" = "linux" ]; then
-  export LLDB_BUNDLE_DEBUGSERVER_PATH="$LLDB_BUILD_DIR/bin/debugserver"
+  export LLDB_BUNDLE_DEBUGSERVER_PATH="$LLDB_DEBUGSERVER_PATH"
 fi
 
 export LLDB_SYS_CFLAGS='-DLLDB_API='

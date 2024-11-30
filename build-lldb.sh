@@ -109,6 +109,7 @@ if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ] || [ "$current_build_config_version" !
     -S "$LLVM_SRC_DIR/llvm" \
     -B "$LLVM_BUILD_DIR" \
     -G Ninja \
+    -D CMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
     -D CMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
     -D CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded \
     -D LLVM_ENABLE_PROJECTS=lldb \

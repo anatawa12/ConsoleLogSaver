@@ -150,7 +150,7 @@ echo "installing library / binary files" >&2
 
 lib_dir="$LLVM_DIR/lib"
 mkdir -p "$LLVM_DIR/lib"
-find "$LLVM_BUILD_DIR/lib" -depth 1 -type f ! -name '*.cmake' -exec cp '{}' "$lib_dir" ";"
+find "$LLVM_BUILD_DIR/lib" -type f ! -name '*.cmake' | grep 'llvm/build/lib/.*/.*' | xargs -E "" -I {} cp {} "$lib_dir"
 mkdir -p "$LLVM_DIR/bin"
 cp "$LLVM_BUILD_DIR/bin/debugserver" "$LLVM_DIR/bin" || :
 cp "$LLVM_BUILD_DIR/bin/lldb-server" "$LLVM_DIR/bin" || :

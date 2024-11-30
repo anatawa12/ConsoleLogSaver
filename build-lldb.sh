@@ -51,7 +51,7 @@ case $(uname) in
     ;;
   Linux*)
     TARGET_ARCH='X86'
-    BUILD_TARGETS='liblldb lldb-server'
+    BUILD_TARGETS='liblldb'
     lib_prefix=lib
     lib_suffix=.a
     ;;

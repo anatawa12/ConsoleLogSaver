@@ -29,6 +29,7 @@ jobs:
           . ./build-lldb-info.sh
           RELEASE_NAME="lldb-${LLVM_COMMIT_SHORT}-${BUILD_CONFIG_VERSION}"
           gh release create \
+            "$RELEASE_NAME" \
             --draft --latest=false \
             --target "$GITHUB_REF_NAME" \
             --title "liblldb built library with lldb ${LLVM_COMMIT_SHORT} and build config ${BUILD_CONFIG_VERSION}" \
@@ -37,14 +38,15 @@ jobs:
   build-lldb:
     needs: [ draft-release ]
 
-    matrix:
-      include:
-        - runs-on: macos-latest
-          os: macos
-        - runs-on: windows-latest
-          os: windows
-        - runs-on: linux-latest
-          os: linux
+    strategy:
+      matrix:
+        include:
+          - runs-on: macos-latest
+            os: macos
+          - runs-on: windows-latest
+            os: windows
+          - runs-on: ubuntu-latest
+            os: linux
 
     runs-on: ${{ matrix.runs-on }}
     steps:

@@ -9,6 +9,7 @@ BUILD_RELEASE=false
 LLDB_LIB_DIR=${LLDB_LIB_DIR:-"$PROJECT_DIR/llvm/lib"}
 LLDB_INCLUDE_DIR=${LLDB_INCLUDE_DIR:-"$PROJECT_DIR/llvm/include"}
 LLDB_DEBUGSERVER_PATH=${LLDB_DEBUGSERVER_PATH:-"$PROJECT_DIR/llvm/bin/debugserver"}
+CARGO_BUILD_TARGET=$(rustc -vV  | grep '^host: ' | sed 's/^host: //')
 ENABLE_GUI=true
 
 while [ "$#" != 0 ]; do
@@ -48,6 +49,19 @@ while [ "$#" != 0 ]; do
         ENABLE_GUI=false
         shift
         ;;
+      --release)
+        BUILD_RELEASE=true
+        shift
+        ;;
+      --target)
+        shift
+        if [ "$#" = 0 ]; then
+          echo "no arg for --debugserver-path" >&2
+          exit 1
+        fi
+        CARGO_BUILD_TARGET="$1"
+        shift
+        ;;
       *)
         echo "unknown option: $1" >&2
         exit 1;
@@ -85,14 +99,16 @@ esac
 # configuration variables
 
 if [ -z "${CARGO_TARGET_DIR:-}" ]; then
-  if [ "$BUILD_RELEASE" = "true" ]; then
-    CARGO_BUILT_DIR="$PROJECT_DIR/target/release"
-  else
-    CARGO_BUILT_DIR="$PROJECT_DIR/target/debug"
-  fi
   CARGO_TARGET_DIR="$PROJECT_DIR/target"
 fi
 
+if [ "$BUILD_RELEASE" = "true" ]; then
+  CARGO_BUILT_DIR="$CARGO_TARGET_DIR/$CARGO_BUILD_TARGET/release"
+else
+  CARGO_BUILT_DIR="$CARGO_TARGET_DIR/$CARGO_BUILD_TARGET/debug"
+fi
+
+export CARGO_BUILD_TARGET
 export CARGO_TARGET_DIR
 
 if [ "$BUILD_RELEASE" = "true" ]; then
@@ -102,7 +118,7 @@ else
   CARGO_PROFILE_ARG=
 fi
 
-BUILD_TMP_DIR="$CARGO_TARGET_DIR/cls-temp"
+BUILD_TMP_DIR="$CARGO_TARGET_DIR/$CARGO_BUILD_TARGET/cls-temp"
 mkdir -p "$BUILD_TMP_DIR"
 
 # general global variable

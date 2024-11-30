@@ -45,13 +45,13 @@ CMAKE_BUILD_TYPE=Release
 case $(uname) in
   Darwin*)
     TARGET_ARCH='AArch64;X86'
-    BUILD_TARGETS='debugserver liblldb'
+    BUILD_TARGETS='liblldb debugserver'
     lib_prefix=lib
     lib_suffix=.a
     ;;
   Linux*)
     TARGET_ARCH='X86'
-    BUILD_TARGETS='debugserver liblldb'
+    BUILD_TARGETS='liblldb lldb-server'
     lib_prefix=lib
     lib_suffix=.a
     ;;
@@ -152,6 +152,5 @@ lib_dir="$LLVM_DIR/lib"
 mkdir -p "$LLVM_DIR/lib"
 find "$LLVM_BUILD_DIR/lib" -depth 1 -type f ! -name '*.cmake' -exec cp '{}' "$lib_dir" ";"
 mkdir -p "$LLVM_DIR/bin"
-if [ -f "$LLVM_BUILD_DIR/bin/debugserver" ]; then
-  cp "$LLVM_BUILD_DIR/bin/debugserver" "$LLVM_DIR/bin"
-fi
+cp "$LLVM_BUILD_DIR/bin/debugserver" "$LLVM_DIR/bin" || :
+cp "$LLVM_BUILD_DIR/bin/lldb-server" "$LLVM_DIR/bin" || :

@@ -13,9 +13,9 @@ use common::load_image;
 #[cfg(unix)]
 use unix::load_image;
 
-#[cfg(not(unix))]
+#[cfg(not(target_os = "macos"))]
 use common::prepare_debug_server;
-#[cfg(unix)]
+#[cfg(target_os = "macos")]
 use unix::prepare_debug_server;
 
 pub fn get_buffer(pid: lldb_pid_t) -> Result<Vec<u8>, ProcessRemoteError> {

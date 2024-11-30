@@ -350,7 +350,7 @@ begin_block 8 # ok_block
     })
 }
 
-#[cfg(all(unix, not(feature = "external_debug_server")))]
+#[cfg(all(target_os = "macos", not(feature = "external_debug_server")))]
 pub fn prepare_debug_server() -> crate::Result<Option<TempPath>> {
     use std::os::unix::fs::PermissionsExt;
 
@@ -375,7 +375,7 @@ pub fn prepare_debug_server() -> crate::Result<Option<TempPath>> {
     Ok(Some(debugserver.into_temp_path()))
 }
 
-#[cfg(all(unix, feature = "external_debug_server"))]
+#[cfg(all(target_os = "macos", feature = "external_debug_server"))]
 pub fn prepare_debug_server() -> crate::Result<Option<TempPath>> {
     let debugserver = env!("LLDB_REFERENCE_DEBUGSERVER_PATH");
 

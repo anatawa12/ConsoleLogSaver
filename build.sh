@@ -8,7 +8,7 @@ PROJECT_DIR="$(pwd)"
 BUILD_RELEASE=false
 LLDB_LIB_DIR=${LLDB_LIB_DIR:-"$PROJECT_DIR/llvm/lib"}
 LLDB_INCLUDE_DIR=${LLDB_INCLUDE_DIR:-"$PROJECT_DIR/llvm/include"}
-LLDB_DEBUGSERVER_PATH=
+LLDB_DEBUGSERVER_PATH=${LLDB_DEBUGSERVER_PATH:-"$PROJECT_DIR/llvm/bin/debugserver"}
 CARGO_BUILD_TARGET=$(rustc -vV  | grep '^host: ' | sed 's/^host: //')
 ENABLE_GUI=true
 
@@ -173,9 +173,7 @@ export LLDB_INCLUDE_DIRS
 export LLDB_LIB_DIR
 
 if [ "$OS" = "macos" ]; then
-  export LLDB_BUNDLE_DEBUGSERVER_PATH="${LLDB_DEBUGSERVER_PATH:-"$PROJECT_DIR/llvm/bin/debugserver"}"
-elif [ "$OS" = "linux" ]; then
-  export LLDB_BUNDLE_DEBUGSERVER_PATH="${LLDB_DEBUGSERVER_PATH:-"$PROJECT_DIR/llvm/bin/lldb-server"}"
+  export LLDB_BUNDLE_DEBUGSERVER_PATH="${LLDB_DEBUGSERVER_PATH}"
 fi
 
 export LLDB_SYS_CFLAGS='-DLLDB_API='

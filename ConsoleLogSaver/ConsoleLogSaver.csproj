@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>11</LangVersion>
+        <Nullable>enable</Nullable>
+
+        <AssemblyVersion>1.2.3</AssemblyVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\deps\debugger-libs\Mono.Debugger.Soft\Mono.Debugger.Soft.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<root>
+    <data name="TwoInstanceDetected">
+        <value>Two Instance Detected</value>
+    </data>
+    <data name="UpdateRunningUnityList">
+        <value>Update Running Unity List</value>
+    </data>
+    <data name="SecuritySettings">
+        <value>Security Settings</value>
+    </data>
+    <data name="UnityVersion">
+        <value>Unity Version (required)</value>
+    </data>
+    <data name="HideOSInfo">
+        <value>Hide OS Info</value>
+    </data>
+    <data name="HideUserName">
+        <value>Hide User Name</value>
+    </data>
+    <data name="HideUserHome">
+        <value>Hide User Home</value>
+    </data>
+    <data name="HideAwsApiKey">
+        <value>Hide AWS API Key</value>
+    </data>
+    <data name="HideAssetUrl">
+        <value>Hide URL to download VRChat assets</value>
+    </data>
+    <data name="HideAwsUploadSignature">
+        <value>Hide AWS Upload Signature</value>
+    </data>
+    <data name="SaveToFile">
+        <value>Save to File</value>
+    </data>
+    <data name="CopyToClipboard">
+        <value>Copy to Clipboard</value>
+    </data>
+    <data name="VersionAndCheckingForUpdates" xml:space="preserve">
+        <value>Version {0}. Checking for updates...</value>
+    </data>
+    <data name="VersionAndLatest" xml:space="preserve">
+        <value>Version {0}. It's Latest.</value>
+    </data>
+    <data name="VersionAndFailed" xml:space="preserve">
+        <value>Version {0}. Failed to fetch latest version.</value>
+    </data>
+    <data name="VersionAndNewFound" xml:space="preserve">
+        <value>Version {0}. Found new version {1}. Click $here$ for download!</value>
+    </data>
+</root>

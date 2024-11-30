@@ -1,0 +1,9 @@
+{
+  "releaseChanger": [
+    {
+      "changer": "regex-pattern",
+      "path": "ConsoleLogSaver/ConsoleLogSaver.csproj",
+      "info": "<AssemblyVersion>$1</AssemblyVersion>"
+    }
+  ]
+}

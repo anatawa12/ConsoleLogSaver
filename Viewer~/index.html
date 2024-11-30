@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<title>ConsoleLogSaver Viewer</title>
+<style>
+    html, body {
+        margin: 0;
+        background-color: lightgray;
+        font-family: monospace;
+    }
+    .page {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .page-header {
+        height: 55px;
+        border-bottom: black 1px solid;
+        flex-shrink: 0;
+        padding: 0 5px;
+    }
+    .page-header > button {
+        font-size: 15px;
+        padding: 10px 20px;
+        border: none;
+        background-color: #1E90FF;
+        color: white;
+    }
+    .page-header > button[data-active] {
+        background-color: #1e4fff;
+    }
+    [hidden]{
+        display:none !important; /* allow make flexbox hidden */
+    }
+</style>
+
+<style>
+    .page-input-text-area {
+        resize: none;
+        flex-grow: 1;
+        margin: 0;
+        padding: 10px;
+        border: black 1px solid;
+        box-sizing: border-box;
+        white-space: pre;
+    }
+    .page-input > .page-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+</style>
+
+<div class="page page-input">
+    <div class="page-header">
+        <button class="page-input-parse-button">Parse log</button>
+    </div>
+    <textarea class="page-input-text-area" placeholder="Paste log here OR Drag &amp; Drop log file!"></textarea>
+</div>
+
+<style>
+    .page-logs > .page-header {
+        display: flex;
+        align-items: center;
+    }
+    .page-logs-button {
+        margin: 4px
+    }
+    .page-logs-list {
+        display: flex;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .page-logs-element {
+        display: flex;
+        flex-direction: row;
+        line-height: 1.2em;
+        border-bottom: black 1px solid;
+    }
+    .page-logs-list[data-collapsed] > .page-logs-element[data-collapsed] {
+        display: none;
+    }
+    .page-logs-list[data-hide-error] > .page-logs-element[data-log-level="error"] {
+        display: none;
+    }
+    .page-logs-list[data-hide-warning] > .page-logs-element[data-log-level="warning"] {
+        display: none;
+    }
+    .page-logs-list[data-hide-info] > .page-logs-element[data-log-level="info"] {
+        display: none;
+    }
+    .page-logs-element > .page-logs-element-icon {
+        background: url('info.svg');
+        flex-shrink: 0;
+    }
+    .page-logs-element[data-log-level="error"] > .page-logs-element-icon {
+        background: url('error.svg');
+    }
+    .page-logs-element[data-log-level="warning"] > .page-logs-element-icon {
+        background: url('warning.svg');
+    }
+    .page-logs-element-icon {
+        width: calc(2 * 1.2em);
+        height: calc(2 * 1.2em);
+        padding: 3px;
+    }
+    .page-logs-element-text-short-area {
+        position: relative;
+        height: calc(2 * 1.2em);
+        flex-grow: 1;
+        padding: 3px;
+        overflow: hidden;
+    }
+    .page-logs-element-text-short {
+        white-space: pre;
+    }
+    .page-logs-element-collapsed-count-area {
+        position: absolute;
+        top: 0;
+        right: 3px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .page-logs-element-collapsed-count {
+        background: white;
+        border-radius: calc(0.6em + 1px);
+        text-align: center;
+        padding: 1px 0.5em;
+        display: none;
+    }
+    .page-logs-list[data-collapsed] .page-logs-element-collapsed-count {
+        display: initial;
+    }
+    .page-logs-body {
+        flex-shrink: 0;
+        height: 30%;
+        min-height: 100px;
+        border-top: black 1px solid;
+        white-space: pre;
+        overflow-x: auto;
+    }
+</style>
+<div class="page page-logs" hidden>
+    <div class="page-header">
+        <button class="page-logs-button page-logs-back-button">Back</button>
+        <button class="page-logs-button page-logs-show-project-info-button">Show Project Info</button>
+        <button class="page-logs-button page-logs-collapse-button">Collapse</button>
+        <button class="page-logs-button page-logs-info-button" data-active>Info</button>
+        <button class="page-logs-button page-logs-warning-button" data-active>Warning</button>
+        <button class="page-logs-button page-logs-error-button" data-active>Error</button>
+    </div>
+
+    <template id="page-log-template-element">
+        <div class="page-logs-element" onclick="onClickLogElement(this)"
+             data-full-text=""
+             data-log-level="error">
+            <span class="page-logs-element-icon"></span>
+            <div class="page-logs-element-text-short-area">
+                <span class="page-logs-element-text-short">
+                </span>
+                <div class="page-logs-element-collapsed-count-area">
+                    <div class="page-logs-element-collapsed-count"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div class="page-logs-list">
+    </div>
+    <div class="page-logs-body"></div>
+</div>
+
+<script src="index.js"></script>

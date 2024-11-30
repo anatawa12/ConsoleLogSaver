@@ -1,0 +1,29 @@
+on:
+  push:
+    branches: [ master, reimplement-with-debugger-protocol ]
+  pull_request:
+    branches: [ master, reimplement-with-debugger-protocol ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup .NET Core SDK 8.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet --version
+      - run: dotnet restore
+      - run: dotnet build --no-restore
+      - run: dotnet test --no-restore
+
+      # finally run build script for release
+      - run: ./build.sh
+        shell: bash
+      - uses: actions/upload-artifact@v3
+        with:
+          name: bin
+          path: bin

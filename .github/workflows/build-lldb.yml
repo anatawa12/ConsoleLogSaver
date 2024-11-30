@@ -57,7 +57,7 @@ jobs:
         env:
           OS: ${{ matrix.os }}
         run: |
-          . ./build-lldb-info.h
+          . ./build-lldb-info.sh
 
           RELEASE_NAME="lldb-${LLVM_COMMIT_SHORT}-${BUILD_CONFIG_VERSION}"
           TGZ_PATH="${RELEASE_NAME}-${OS}.tar.gz"

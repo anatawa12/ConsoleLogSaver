@@ -2,7 +2,7 @@
 
 set -eu
 
-LLVM_COMMIT="6fde56c8d977c942ac8deb0af2f290c01c52052a"
+. "$(dirname "$0")/build-lldb-info.sh"
 LLVM_ARCHIVE_URL="https://github.com/anatawa12/llvm-project/archive/${LLVM_COMMIT}.tar.gz"
 
 PROJECT_DIR="$(pwd)"
@@ -93,7 +93,9 @@ case $(uname) in
     exit 1;
 esac
 
-if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ]; then
+current_build_config_version="$(cat "$LLVM_BUILD_DIR/.build-config-version")"
+
+if [ ! -f "$LLVM_BUILD_DIR/build.ninja" ] || [ "$current_build_config_version" != "$BUILD_CONFIG_VERSION" ]; then
   cmake \
     -S "$LLVM_SRC_DIR/llvm" \
     -B "$LLVM_BUILD_DIR" \

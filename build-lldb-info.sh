@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export LLVM_COMMIT="6fde56c8d977c942ac8deb0af2f290c01c52052a"
+export BUILD_CONFIG_VERSION=1

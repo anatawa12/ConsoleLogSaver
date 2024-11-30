@@ -49,6 +49,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
+      - uses: imesense/gha-setup-ninja@v0.2
       - run: ./build-lldb.sh
         shell: bash
       - name: Archive built binary

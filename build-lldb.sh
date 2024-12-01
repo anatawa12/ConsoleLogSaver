@@ -92,6 +92,8 @@ case $(uname) in
     export PATH="$PATH:$(cygpath "$MSVC_PATH"):$(cygpath "$WINDOWS_KIT_BIN")"
     export LIB="$(cygpath -wp "$WINDOWS_KIT_UCRT_LIB:$WINDOWS_KIT_UM_LIB:$MSVC_LIB")"
     export INCLUDE="$(cygpath -wp "$WINDOWS_KIT_UCRT_INCLUDE:$WINDOWS_KIT_UM_INCLUDE:$WINDOWS_KIT_SHARED_INCLUDE:$MSVC_INCLUDE")"
+    export CC="cl.exe"
+    export CXX="cl.exe"
 
     ;;
   * )

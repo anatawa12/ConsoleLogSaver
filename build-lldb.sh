@@ -74,7 +74,10 @@ case $(uname) in
     MSVC_LIB="$MSVC_DIR/lib/x64"
     MSVC_INCLUDE="$MSVC_DIR/include"
 
-    WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")" 
+    WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
+    if [ -z "$WINDOWS_KIT_ROOT" ] || ! [ -d "$WINDOWS_KIT_ROOT" ]; then 
+      WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
+    fi 
     for WINDOWS_KIT_VERSION_BIN in "$WINDOWS_KIT_ROOT"/bin/* ; do
         if [ -f "$WINDOWS_KIT_VERSION_BIN"/x64/rc.exe ]; then
           WINDOWS_KIT_VERSION="${WINDOWS_KIT_VERSION_BIN##*/}"
@@ -84,10 +87,15 @@ case $(uname) in
           WINDOWS_KIT_UCRT_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/ucrt"
           WINDOWS_KIT_UM_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/um"
           WINDOWS_KIT_SHARED_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/shared"
-          echo "$WINDOWS_KIT_UM_LIB"
+          echo "using windows kit $WINDOWS_KIT_VERSION"
           break
         fi
     done
+
+    if [ -z "$WINDOWS_KIT_VERSION" ]; then
+      echo "No Windows Kit found" >&2
+      exit 1
+    fi
 
     export PATH="$PATH:$(cygpath "$MSVC_PATH"):$(cygpath "$WINDOWS_KIT_BIN")"
     export LIB="$(cygpath -wp "$WINDOWS_KIT_UCRT_LIB:$WINDOWS_KIT_UM_LIB:$MSVC_LIB")"

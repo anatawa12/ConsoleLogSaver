@@ -78,6 +78,7 @@ case $(uname) in
     if [ -z "$WINDOWS_KIT_ROOT" ] || ! [ -d "$WINDOWS_KIT_ROOT" ]; then 
       WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
     fi 
+    echo "We found windows kit at $WINDOWS_KIT_ROOT" >&2
     for WINDOWS_KIT_VERSION_BIN in "$WINDOWS_KIT_ROOT"/bin/* ; do
         if [ -f "$WINDOWS_KIT_VERSION_BIN"/x64/rc.exe ]; then
           WINDOWS_KIT_VERSION="${WINDOWS_KIT_VERSION_BIN##*/}"
@@ -87,7 +88,7 @@ case $(uname) in
           WINDOWS_KIT_UCRT_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/ucrt"
           WINDOWS_KIT_UM_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/um"
           WINDOWS_KIT_SHARED_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/shared"
-          echo "using windows kit $WINDOWS_KIT_VERSION"
+          echo "using windows kit $WINDOWS_KIT_VERSION" >&2
           break
         fi
     done

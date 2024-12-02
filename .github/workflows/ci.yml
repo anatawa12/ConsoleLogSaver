@@ -29,7 +29,7 @@ jobs:
       - run: ./build.sh --target ${{ matrix.additional-target }}
         if: ${{ matrix.additional-target }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.runs-on }}
-          path: target/*/ConsoleLogSaver*
+          path: target/*/*/ConsoleLogSaver*

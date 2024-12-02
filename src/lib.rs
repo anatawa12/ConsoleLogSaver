@@ -49,6 +49,10 @@ pub fn find_unity_processes() -> Vec<UnityProcess> {
 
     let mut unity_processes = Vec::new();
     for (pid, proc) in sysinfo.processes() {
+        if proc.thread_kind().is_some() {
+            // we don't want to include threads
+            continue;
+        }
         let Some(exe) = proc.exe() else { continue };
         if !exe.ends_with(exe_name) {
             continue;

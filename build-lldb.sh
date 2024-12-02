@@ -77,7 +77,7 @@ case $(uname) in
       # $4 is prev pwd, $5 is result
       set -- "$1" "$2" "$3" "$(pwd)" ""
 
-      cd "$WINDOWS_KIT_ROOT/$1"
+      cd "$1/$2"
       for KIT_VERSION in * ; do
         # skip not starting with 10
         case "$KIT_VERSION" in
@@ -85,7 +85,7 @@ case $(uname) in
           *) continue ;;
         esac
 
-        if [ -e "$WINDOWS_KIT_ROOT/$1/$KIT_VERSION/$2" ]; then
+        if [ -e "$1/$2/$KIT_VERSION/$3" ]; then
           set -- "$1" "$2" "$3" "$4" "$KIT_VERSION"
         fi
       done

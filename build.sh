@@ -168,6 +168,9 @@ if [ "$OS" = "macos" ]; then
 fi
 
 LLDB_INCLUDE_DIRS="$LLDB_INCLUDE_DIR:${LLDB_INCLUDE_DIRS:-}"
+if [ "$OS" = "windows" ]; then
+  LLDB_INCLUDE_DIRS="$(cygpath -wp "$LLDB_INCLUDE_DIRS")"
+fi
 export LLDB_INCLUDE_DIRS
 
 export LLDB_LIB_DIR

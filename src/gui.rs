@@ -141,10 +141,10 @@ enum ClsThreadState {
     Error(String),
 }
 
-enum ClsThreadInfo<'a> {
+enum ClsThreadInfo {
     Running,
     Succeeded,
-    Error(&'a str),
+    Error(String),
 }
 
 impl ClsThreadState {
@@ -177,7 +177,7 @@ impl ClsThreadState {
                 self.to_state_mut()
             }
             ClsThreadState::Succeeded => Some(ClsThreadInfo::Succeeded),
-            ClsThreadState::Error(msg) => Some(ClsThreadInfo::Error(msg)),
+            ClsThreadState::Error(msg) => Some(ClsThreadInfo::Error(msg.clone())),
         }
     }
 

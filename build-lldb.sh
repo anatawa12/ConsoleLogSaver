@@ -75,10 +75,10 @@ case $(uname) in
     MSVC_INCLUDE="$MSVC_DIR/include"
 
     # allow specifying with env var
-    if [ -z "$WINDOWS_KIT_ROOT" ] || ! [ -d "$WINDOWS_KIT_ROOT" ]; then 
+    if [ -z "${WINDOWS_KIT_ROOT:-}" ] || ! [ -d "${WINDOWS_KIT_ROOT:-}" ]; then 
       WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
     fi 
-    if [ -z "$WINDOWS_KIT_ROOT" ] || ! [ -d "$WINDOWS_KIT_ROOT" ]; then 
+    if [ -z "${WINDOWS_KIT_ROOT:-}" ] || ! [ -d "${WINDOWS_KIT_ROOT:-}" ]; then 
       WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
     fi 
     WINDOWS_KIT_ROOT="$(cygpath "$WINDOWS_KIT_ROOT")"

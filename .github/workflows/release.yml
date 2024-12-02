@@ -92,7 +92,7 @@ jobs:
           mvcmd x86_64-pc-windows         win-x64     ".pdb"
 
       - name: Upload bin
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: bin
 

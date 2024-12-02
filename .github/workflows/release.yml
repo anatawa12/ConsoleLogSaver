@@ -49,7 +49,7 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: ${{ inputs.publish && 'write' || 'read' }}
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: anatawa12/something-releaser@v2
@@ -59,7 +59,7 @@ jobs:
         id: update-version
         run: |
           VERSION="$(get-version)"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           {
             echo "$VERSION"
             echo "# second line or later may be used for other reason later"

@@ -74,10 +74,14 @@ case $(uname) in
     MSVC_LIB="$MSVC_DIR/lib/x64"
     MSVC_INCLUDE="$MSVC_DIR/include"
 
-    WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
+    # allow specifying with env var
+    if [ -z "$WINDOWS_KIT_ROOT" ] || ! [ -d "$WINDOWS_KIT_ROOT" ]; then 
+      WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
+    fi 
     if [ -z "$WINDOWS_KIT_ROOT" ] || ! [ -d "$WINDOWS_KIT_ROOT" ]; then 
       WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
     fi 
+    WINDOWS_KIT_ROOT="$(cygpath "$WINDOWS_KIT_ROOT")"
     echo "We found windows kit at $WINDOWS_KIT_ROOT" >&2
     for WINDOWS_KIT_VERSION_BIN in "$WINDOWS_KIT_ROOT"/bin/* ; do
         if [ -f "$WINDOWS_KIT_VERSION_BIN"/x64/rc.exe ]; then

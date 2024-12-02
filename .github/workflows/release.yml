@@ -84,12 +84,13 @@ jobs:
           mkdir bin
           mvcmd() {
             mv "target/$1/release/ConsoleLogSaverCli$3" "bin/ConsoleLogSaver.Cli-$2$3" || :
+            mv "target/$1/release/ConsoleLogSaverGui$3" "bin/ConsoleLogSaver.Gui-$2$3" || :
           }
           mvcmd x86_64-apple-darwin       osx-x64     ""
-          mvcmd aarch64-apple-darwin      osx-x64     ""
+          mvcmd aarch64-apple-darwin      osx-arm64   ""
           mvcmd x86_64-unknown-linux-gnu  linux-x64   ""
-          mvcmd x86_64-pc-windows         win-x64     ".exe"
-          mvcmd x86_64-pc-windows         win-x64     ".pdb"
+          mvcmd x86_64-pc-windows-msvc    win-x64     ".exe"
+          mvcmd x86_64-pc-windows-msvc    win-x64     ".pdb"
 
       - name: Upload bin
         uses: actions/upload-artifact@v4

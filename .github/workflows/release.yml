@@ -88,6 +88,7 @@ jobs:
           mvcmd aarch64-apple-darwin      osx-x64     ""
           mvcmd x86_64-unknown-linux-gnu  linux-x64   ""
           mvcmd x86_64-pc-windows         win-x64     ".exe"
+          mvcmd x86_64-pc-windows         win-x64     ".pdb"
 
       - name: Upload bin
         uses: actions/upload-artifact@v3

@@ -12,19 +12,46 @@ concurrency:
   group: publish
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+          - runs-on: macos-latest
+            additional-target: x86_64-apple-darwin
+          - runs-on: windows-latest
+    runs-on: ${{ matrix.runs-on }}
+
+    permissions:
+      contents: read
+
+    # TODO: code sign on macOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.additional-target }}
+      - run: ./download-prebuilt-lldb.sh
+      - run: ./build.sh --release
+      - run: ./build.sh --release --target ${{ matrix.additional-target }}
+        if: ${{ matrix.additional-target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.runs-on }}
+          path: target/*/*/ConsoleLogSaver*
+
   create-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: ${{ inputs.publish && 'write' || 'read' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup .NET Core SDK 8.0.x
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
       - uses: anatawa12/something-releaser@v2
       - uses: snow-actions/git-config-user@v1.0.0
 
@@ -44,7 +71,24 @@ jobs:
           git commit -am "$VERSION"
           git tag "v$VERSION"
 
-      - run: ./build.sh
+      - name: Download built binary
+        uses: actions/download-artifact@v4
+        with:
+          path: target
+          pattern: binary-*
+          merge-multiple: true
+
+      - name: move to bin dir
+        run: |
+          mkdir bin
+          mvcmd() {
+            mv "target/$1/release/ConsoleLogSaverCli$3" "bin/ConsoleLogSaver.Cli-$2$3" || :
+          }
+          mvcmd x86_64-apple-darwin       osx-x64     ""
+          mvcmd aarch64-apple-darwin      osx-x64     ""
+          mvcmd x86_64-unknown-linux-gnu  linux-x64   ""
+          mvcmd x86_64-pc-windows         win-x64     ".exe"
+
       - name: Upload bin
         uses: actions/upload-artifact@v3
         with:

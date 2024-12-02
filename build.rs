@@ -28,7 +28,7 @@ fn main() {
             .expect("failed to stat libdir from llvm-config")
             .filter_map(|entry| match_libname(entry.unwrap().file_name().to_str().unwrap()))
         {
-            println!("cargo:rustc-link-lib=static={x}");
+            println!("cargo:rustc-link-lib=static:-bundle={x}");
             println!("cargo::rerun-if-changed={llvm_lib_path}/lib{x}.a");
         }
     }

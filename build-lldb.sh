@@ -63,7 +63,7 @@ case $(uname) in
 
     # utilities
     get_registry() {
-      until [ -n "$_registry" ]
+      until [ -n "${_registry:-}" ]
       do
         _registry=$(powershell.exe -C "if (Test-Path 'Registry::$1') { (Get-ItemProperty -Path 'Registry::$1').$2 }")
         shift 2
@@ -105,7 +105,7 @@ case $(uname) in
     append_path() {
       # append_path PATH /your/path
       # will be PATH="$PATH:/your/path" or PATH="$/your/path"
-      set "$1" "$2" "$(eval "$$$1")"
+      set "$1" "$2" "$(eval "\$$1")"
       if [ -z "$3" ]; then
         eval "$1=$(escape_sh "$2")"
       else

@@ -21,7 +21,6 @@ use unix::prepare_debug_server;
 pub fn get_buffer(pid: lldb_pid_t) -> Result<Vec<u8>, ProcessRemoteError> {
     SBDebugger::initialize();
 
-    #[cfg(all(unix, not(feature = "external_debug_server")))]
     let _debugserver = prepare_debug_server()?;
 
     let attach_lib_dylib = {

@@ -105,7 +105,7 @@ case $(uname) in
     append_path() {
       # append_path PATH /your/path
       # will be PATH="$PATH:/your/path" or PATH="$/your/path"
-      set "$1" "$2" "$(eval "\${$1:-}")"
+      set "$1" "$2" "$(eval "echo \${$1:-}")"
       if [ -z "$3" ]; then
         eval "$1=$(escape_sh "$2")"
       else

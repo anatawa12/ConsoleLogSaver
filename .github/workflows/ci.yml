@@ -1,29 +1,30 @@
 on:
   push:
-    branches: [ master, reimplement-with-debugger-protocol ]
+    branches: [ master, lldb-implementation ]
   pull_request:
-    branches: [ master, reimplement-with-debugger-protocol ]
+    branches: [ master, lldb-implementation ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+          - runs-on: macos-latest
+            additional-target: x86_64-apple-darwin
+          - runs-on: windows-latest
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          submodules: recursive
-      - name: Setup .NET Core SDK 8.0.x
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - run: dotnet --version
-      - run: dotnet restore
-      - run: dotnet build --no-restore
-      - run: dotnet test --no-restore
-
-      # finally run build script for release
+          targets: ${{ matrix.additional-target }}
       - run: ./build.sh
-        shell: bash
+      - run: ./build.sh --target ${{ matrix.additional-target }}
+        if: ${{ matrix.additional-target }}
+
       - uses: actions/upload-artifact@v3
         with:
-          name: bin
-          path: bin
+          name: binary-${{ matrix.runs-on }}
+          path: target/*/ConsoleLogSaver*

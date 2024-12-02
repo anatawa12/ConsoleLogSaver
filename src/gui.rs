@@ -67,6 +67,7 @@ struct Messages {
     text_files_star_txt: &'static str,
     copy_to_clipboard: &'static str,
     finished: &'static str,
+    error_getting_log_data: &'static str,
     close: &'static str,
     fetching_log: &'static str,
     this_may_take_several_tens_of_seconds: &'static str,
@@ -91,6 +92,7 @@ impl Messages {
                 text_files_star_txt: "Text Files (*.txt)",
                 copy_to_clipboard: "Copy to Clipboard",
                 finished: "Finished!",
+                error_getting_log_data: "Error getting log data",
                 close: "Close",
                 fetching_log: "Fetching log...",
                 this_may_take_several_tens_of_seconds: "This may take several tens of seconds...",
@@ -115,6 +117,7 @@ impl Messages {
                 text_files_star_txt: "テキストファイル (*.txt)",
                 copy_to_clipboard: "コピーする",
                 finished: "完了!",
+                error_getting_log_data: "エラーが発生しました",
                 close: "閉じる",
                 fetching_log: "ログを取得中...",
                 this_may_take_several_tens_of_seconds: "数十秒かかることがあります...",
@@ -131,11 +134,63 @@ impl Messages {
     }
 }
 
+enum ClsThreadState {
+    NoThread,
+    Running(std::thread::JoinHandle<Result<(), String>>),
+    Succeeded,
+    Error(String),
+}
+
+enum ClsThreadInfo<'a> {
+    Running,
+    Succeeded,
+    Error(&'a str),
+}
+
+impl ClsThreadState {
+    fn to_state_mut(&mut self) -> Option<ClsThreadInfo> {
+        match self {
+            ClsThreadState::NoThread => None,
+            ClsThreadState::Running(running) if !running.is_finished() => {
+                Some(ClsThreadInfo::Running)
+            }
+            ClsThreadState::Running(_) => {
+                // it's marked running, but is actually finished so get result
+                let state = std::mem::replace(self, ClsThreadState::Error("panic getting result".into()));
+                let ClsThreadState::Running(running) = state else {
+                    unreachable!()
+                };
+                *self = match running.join() {
+                    Ok(Ok(())) => ClsThreadState::Succeeded,
+                    Ok(Err(msg)) => ClsThreadState::Error(msg),
+                    Err(panic) => {
+                        if let Some(s) = panic.downcast_ref::<&str>() {
+                            ClsThreadState::Error(s.to_string())
+                        } else if let Some(s) = panic.downcast_ref::<String>() {
+                            ClsThreadState::Error(s.to_string())
+                        } else {
+                            ClsThreadState::Error("Unknown panic (non string/str payload)".into())
+                        }
+                    }
+                };
+                // run again
+                self.to_state_mut()
+            }
+            ClsThreadState::Succeeded => Some(ClsThreadInfo::Succeeded),
+            ClsThreadState::Error(msg) => Some(ClsThreadInfo::Error(msg)),
+        }
+    }
+
+    pub(crate) fn exists(&self) -> bool {
+        !matches!(self, ClsThreadState::NoThread)
+    }
+}
+
 struct ConsoleLogSaverGui {
     unity_process: Vec<UnityProcess>,
     selected_pid: Option<ProcessId>,
     config: ConsoleLogSaverConfig,
-    cls_thread: Option<std::thread::JoinHandle<Result<(), String>>>,
+    cls_thread: ClsThreadState,
     to_copy: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     locale: SupportedLocale,
 }
@@ -158,7 +213,7 @@ impl ConsoleLogSaverGui {
         let mut result = Self {
             unity_process: Vec::new(),
             config: Default::default(),
-            cls_thread: None,
+            cls_thread: ClsThreadState::NoThread,
             selected_pid: None,
             to_copy: std::sync::Arc::new(std::sync::Mutex::new(None)),
             locale: language_default(),
@@ -180,7 +235,7 @@ impl eframe::App for ConsoleLogSaverGui {
         let m = Messages::get_by_locale(self.locale);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            if self.cls_thread.is_some() {
+            if self.cls_thread.exists() {
                 ui.disable()
             }
 
@@ -260,7 +315,7 @@ impl eframe::App for ConsoleLogSaverGui {
                         .save_file()
                     {
                         let config = self.config.clone();
-                        self.cls_thread = Some(
+                        self.cls_thread = ClsThreadState::Running(
                             std::thread::Builder::new()
                                 .spawn(move || {
                                     let log = run_console_log_saver(pid, &config)
@@ -278,7 +333,7 @@ impl eframe::App for ConsoleLogSaverGui {
                     let pid = self.selected_pid.unwrap();
                     let config = self.config.clone();
                     let clipboard_arc = self.to_copy.clone();
-                    self.cls_thread = Some(
+                    self.cls_thread = ClsThreadState::Running(
                         std::thread::Builder::new()
                             .spawn(move || {
                                 let log = run_console_log_saver(pid, &config)
@@ -292,7 +347,7 @@ impl eframe::App for ConsoleLogSaverGui {
             });
         });
 
-        if self.cls_thread.is_some() {
+        if let Some(info) = self.cls_thread.to_state_mut() {
             let mut always_open = true;
             let rect = ctx.input(|x| x.screen_rect());
             egui::Window::new("")
@@ -302,19 +357,29 @@ impl eframe::App for ConsoleLogSaverGui {
                 .fixed_pos((rect.width() / 2.0, rect.height() / 2.0))
                 .open(&mut always_open)
                 .show(ctx, |ui| {
-                    if let Some(handle) = &self.cls_thread {
-                        if handle.is_finished() {
-                            ui.vertical_centered(|ui| {
-                                ui.label(m.finished);
-                                if ui.button(m.close).clicked() {
-                                    self.cls_thread = None;
-                                }
-                            });
-                        } else {
+                    match info {
+                        ClsThreadInfo::Running => {
                             ui.vertical_centered(|ui| {
                                 egui::Spinner::new().ui(ui);
                                 ui.label(m.fetching_log);
                                 ui.label(m.this_may_take_several_tens_of_seconds);
+                            });
+                        }
+                        ClsThreadInfo::Succeeded => {
+                            ui.vertical_centered(|ui| {
+                                ui.label(m.finished);
+                                if ui.button(m.close).clicked() {
+                                    self.cls_thread = ClsThreadState::NoThread;
+                                }
+                            });
+                        }
+                        ClsThreadInfo::Error(msg) => {
+                            ui.vertical_centered(|ui| {
+                                ui.label(m.error_getting_log_data);
+                                ui.label(msg);
+                                if ui.button(m.close).clicked() {
+                                    self.cls_thread = ClsThreadState::NoThread;
+                                }
                             });
                         }
                     }

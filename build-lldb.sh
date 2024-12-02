@@ -61,50 +61,124 @@ case $(uname) in
     lib_prefix=
     lib_suffix=.lib
 
+    # utilities
+    get_registry() {
+      until [ -n "$_registry" ]
+      do
+        _registry=$(powershell.exe -C "if (Test-Path 'Registry::$1') { (Get-ItemProperty -Path 'Registry::$1').$2 }")
+        shift 2
+      done
+      echo "$_registry"
+    }
+
+    find_version() {
+      # WINDOWS_KIT_UCRT_LIB=$(find_version "$WINDOWS_KIT_ROOT" 'lib' 'ucrt')
+
+      # $4 is prev pwd, $5 is result
+      set -- "$1" "$2" "$3" "$(pwd)" ""
+
+      cd "$WINDOWS_KIT_ROOT/$1"
+      for KIT_VERSION in * ; do
+        # skip not starting with 10
+        case "$KIT_VERSION" in
+          10.* ) ;;
+          *) continue ;;
+        esac
+
+        if [ -e "$WINDOWS_KIT_ROOT/$1/$KIT_VERSION/$2" ]; then
+          set -- "$1" "$2" "$3" "$4" "$KIT_VERSION"
+        fi
+      done
+
+      cd "$4"
+      echo "$5"
+    }
+
+    escape_sh() {
+      # escape_sh "your string needs ' escape"
+      # => will get 'your string needs '\'' escape'
+      # this is for eval
+
+      printf "'%s'\n" "$(printf "%s" "$1" | sed "s/'/'\\\\''/")" 
+    }
+
+    append_path() {
+      # append_path PATH /your/path
+      # will be PATH="$PATH:/your/path" or PATH="$/your/path"
+      set "$1" "$2" "$(eval "$$$1")"
+      if [ -z "$3" ]; then
+        eval "$1=$(escape_sh "$2")"
+      else
+        eval "$1=$(escape_sh "$3"):$(escape_sh "$2")"
+      fi
+    }
+
     # find msvc path
     PROGRAM_FILES_X86="$(perl -E 'say $ENV{"ProgramFiles(x86)"}')"
-    PROGRAM_FILES_X86=${PROGRAM_FILES_X86:-$ProgramFiles}
-    PROGRAM_FILES_X86="$(cygpath "$PROGRAM_FILES_X86")"
-    VSWHERE="$PROGRAM_FILES_X86/Microsoft Visual Studio/Installer/vswhere.exe"
+    ANY_PROGRAM_FILES=${PROGRAM_FILES_X86:-$ProgramFiles}
+    ANY_PROGRAM_FILES="$(cygpath "$ANY_PROGRAM_FILES")"
+    VSWHERE="$ANY_PROGRAM_FILES/Microsoft Visual Studio/Installer/vswhere.exe"
 
-    VISUAL_STUDI_INSTALL_PATH="$("$VSWHERE" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format text -nologo | grep 'installationPath' | sed 's/[^:]*: //')"
-    DEFAULT_MSVC_VERSION="$(cat "$VISUAL_STUDI_INSTALL_PATH/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt")"
-    MSVC_DIR="$VISUAL_STUDI_INSTALL_PATH/VC/Tools/MSVC/$DEFAULT_MSVC_VERSION"
-    MSVC_PATH="$MSVC_DIR/bin/HostX64/x64"
-    MSVC_LIB="$MSVC_DIR/lib/x64"
-    MSVC_INCLUDE="$MSVC_DIR/include"
+    VISUAL_STUDIO_INSTALL_PATH="$("$VSWHERE" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format text -nologo | grep 'installationPath' | sed 's/[^:]*: //')"
+    VISUAL_STUDIO_INSTALL_PATH="$(cygpath "$VISUAL_STUDIO_INSTALL_PATH")"
+    DEFAULT_MSVC_VERSION="$(cat "$VISUAL_STUDIO_INSTALL_PATH/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt")"
+    echo "Using Visual Studio $VISUAL_STUDIO_INSTALL_PATH" >&2
+    echo "Using MSVC $DEFAULT_MSVC_VERSION" >&2
 
-    # allow specifying with env var
+    MSVC_DIR="$VISUAL_STUDIO_INSTALL_PATH/VC/Tools/MSVC/$DEFAULT_MSVC_VERSION"
+
+    append_path PATH "$MSVC_DIR/bin/HostX64/x64"
+    append_path LIB_CYGPATH "$MSVC_DIR/lib/x64"
+    append_path INCLUDE_CYGPATH "$MSVC_DIR/include"
+
     if [ -z "${WINDOWS_KIT_ROOT:-}" ] || ! [ -d "${WINDOWS_KIT_ROOT:-}" ]; then 
-      WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
-    fi 
-    if [ -z "${WINDOWS_KIT_ROOT:-}" ] || ! [ -d "${WINDOWS_KIT_ROOT:-}" ]; then 
-      WINDOWS_KIT_ROOT="$(powershell.exe -C "(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots').KitsRoot10")"
-    fi 
+      WINDOWS_KIT_ROOT="$(get_registry \
+        "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots" 'KitsRoot10' \
+        "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots" 'KitsRoot10'\
+      )"
+    fi
     WINDOWS_KIT_ROOT="$(cygpath "$WINDOWS_KIT_ROOT")"
     echo "We found windows kit at $WINDOWS_KIT_ROOT" >&2
-    for WINDOWS_KIT_VERSION_BIN in "$WINDOWS_KIT_ROOT"/bin/* ; do
-        if [ -f "$WINDOWS_KIT_VERSION_BIN"/x64/rc.exe ]; then
-          WINDOWS_KIT_VERSION="${WINDOWS_KIT_VERSION_BIN##*/}"
-          WINDOWS_KIT_BIN="$WINDOWS_KIT_VERSION_BIN"/x64
-          WINDOWS_KIT_UCRT_LIB="$WINDOWS_KIT_ROOT/lib/$WINDOWS_KIT_VERSION/ucrt/x64"
-          WINDOWS_KIT_UM_LIB="$WINDOWS_KIT_ROOT/lib/$WINDOWS_KIT_VERSION/um/x64"
-          WINDOWS_KIT_UCRT_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/ucrt"
-          WINDOWS_KIT_UM_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/um"
-          WINDOWS_KIT_SHARED_INCLUDE="$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/shared"
-          echo "using windows kit $WINDOWS_KIT_VERSION" >&2
-          break
-        fi
-    done
 
+    if [ -z "${WINDOWS_SDK_ROOT:-}" ] || ! [ -d "${WINDOWS_SDK_ROOT:-}" ]; then 
+      WINDOWS_SDK_ROOT="$(get_registry \
+        "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0" 'InstallationFolder' \
+        "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Microsoft SDKs\Windows\v10.0" 'InstallationFolder'\
+      )"
+    fi
+    WINDOWS_SDK_ROOT="$(cygpath "$WINDOWS_SDK_ROOT")"
+    echo "We found windows 10 SDK at $WINDOWS_SDK_ROOT" >&2
+
+    WINDOWS_KIT_VERSION="$(find_version "$WINDOWS_KIT_ROOT" lib ucrt)"
+    
     if [ -z "$WINDOWS_KIT_VERSION" ]; then
-      echo "No Windows Kit found" >&2
+      echo "No Windows Kit Version found" >&2
       exit 1
     fi
 
-    export PATH="$PATH:$(cygpath "$MSVC_PATH"):$(cygpath "$WINDOWS_KIT_BIN")"
-    export LIB="$(cygpath -wp "$WINDOWS_KIT_UCRT_LIB:$WINDOWS_KIT_UM_LIB:$MSVC_LIB")"
-    export INCLUDE="$(cygpath -wp "$WINDOWS_KIT_UCRT_INCLUDE:$WINDOWS_KIT_UM_INCLUDE:$WINDOWS_KIT_SHARED_INCLUDE:$MSVC_INCLUDE")"
+    WINDOWS_SDK_VERSION="$(find_version "$WINDOWS_SDK_ROOT" lib um/x64/kernel32.lib)"
+    
+    if [ -z "$WINDOWS_SDK_VERSION" ]; then
+      echo "No Windows 10 SDK Version found" >&2
+      exit 1
+    fi
+
+    append_path PATH "$WINDOWS_KIT_ROOT/bin/$WINDOWS_KIT_VERSION/x64"
+    append_path LIB_CYGPATH "$WINDOWS_KIT_ROOT/lib/$WINDOWS_KIT_VERSION/ucrt/x64"
+    append_path INCLUDE_CYGPATH "$WINDOWS_KIT_ROOT/Include/$WINDOWS_KIT_VERSION/ucrt"
+
+    append_path PATH "$WINDOWS_SDK_ROOT/bin/x64"
+    append_path LIB_CYGPATH "$WINDOWS_SDK_ROOT/lib/$WINDOWS_SDK_VERSION/um/x64"
+    append_path INCLUDE_CYGPATH "$WINDOWS_SDK_ROOT/Include/$WINDOWS_SDK_VERSION/um"
+    append_path INCLUDE_CYGPATH "$WINDOWS_SDK_ROOT/Include/$WINDOWS_SDK_VERSION/cppwinrt"
+    append_path INCLUDE_CYGPATH "$WINDOWS_SDK_ROOT/Include/$WINDOWS_SDK_VERSION/winrt"
+    append_path INCLUDE_CYGPATH "$WINDOWS_SDK_ROOT/Include/$WINDOWS_SDK_VERSION/shared"
+
+    LIB="$(cygpath -wp "$LIB_CYGPATH")"
+    INCLUDE="$(cygpath -wp "$INCLUDE_CYGPATH")"
+    export PATH
+    export LIB
+    export INCLUDE
     export CC="cl.exe"
     export CXX="cl.exe"
 

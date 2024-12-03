@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export LLVM_COMMIT="03574fa939a57bfc76ff7594cd1cbdc5a18d5bf6"
+export LLVM_COMMIT="020ea35b8609c48c01d465edd84d335c89b9509b"
 export BUILD_CONFIG_VERSION=1
 LLVM_COMMIT_SHORT="$(echo "$LLVM_COMMIT" | head -c 8)"
 export LLVM_COMMIT_SHORT

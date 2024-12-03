@@ -15,6 +15,7 @@ jobs:
       matrix:
         include:
           - runs-on: ubuntu-latest
+            setup: sudo apt install libgtk-3-dev
           - runs-on: macos-latest
             additional-target: x86_64-apple-darwin
           - runs-on: windows-latest
@@ -24,6 +25,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.additional-target }}
+      - name: Install Setup Scripts
+        run: ${{ matrix.setup }}
+
       - run: ./download-prebuilt-lldb.sh
       - run: ./build.sh
       - run: ./build.sh --target ${{ matrix.additional-target }}

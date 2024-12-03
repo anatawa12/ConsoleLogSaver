@@ -1,41 +1,515 @@
 #![windows_subsystem = "windows"]
 
 use console_log_saver::*;
-use eframe::egui;
-use eframe::egui::{FontData, FontTweak, Widget};
-use egui_extras::Column;
+use libui::controls::{
+    Button, Checkbox, Combobox, Group, Label, ProgressBar, ProgressBarValue, SelectionMode, Table,
+    TableDataSource, TableModel, TableParameters, TableValue, TableValueType, VerticalBox,
+};
+use libui::prelude::*;
+use std::cell::RefCell;
+use std::os::raw::c_void;
+use std::panic::{catch_unwind, UnwindSafe};
+use std::rc::{Rc, Weak};
 use std::result::Result;
 
-fn main() -> eframe::Result {
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([400.0, 400.0]),
-        ..Default::default()
-    };
-    eframe::run_native(
+fn main() {
+    let ui = UI::init().expect("Couldn't initialize UI library");
+
+    let mut win = Window::new(
+        &ui.clone(),
         "Console Log Saver",
-        options,
-        Box::new(|ctx| {
-            let mut fonts = egui::FontDefinitions::default();
-            fonts.font_data.insert(
-                "Noto-Sans-JP".to_owned(),
-                FontData::from_static(include_bytes!("../font/NotoSansJP-Light.ttf")).tweak(
-                    FontTweak {
-                        //scale: 0.81, // Make smaller
-                        ..Default::default()
+        600,
+        500,
+        WindowType::NoMenubar,
+    );
+
+    let data = Rc::new(RefCell::new(UnityProcessList::new()));
+    let table_model = Rc::new(RefCell::new(TableModel::new(data.clone())));
+    let layout = UILayout::new(&ui, table_model.clone());
+
+    data.borrow_mut()
+        .reload_unity(&mut table_model.borrow_mut());
+
+    {
+        let layout_rc = &layout;
+        let mut layout = layout.borrow_mut();
+
+        layout.set_messages(Messages::get_by_locale(SupportedLocale::default()));
+
+        layout.refresh_unity_list.on_clicked({
+            let data = data.clone();
+            let table_model = table_model.clone();
+            move |_| {
+                data.borrow_mut()
+                    .reload_unity(&mut table_model.borrow_mut());
+            }
+        });
+
+        fn run_other_thread<FOff, FMain, T, E>(
+            layout_weak: Weak<RefCell<UILayout>>,
+            off_closure: FOff,
+            main_closure: FMain,
+        ) where
+            FOff: FnOnce() -> Result<T, E> + Send + UnwindSafe + 'static,
+            FMain: FnOnce(T) -> () + Send + 'static,
+            T: Send + 'static,
+            E: std::fmt::Display + 'static,
+        {
+            let layout_weak = LayoutSender::new(layout_weak.clone());
+            std::thread::spawn({
+                move || {
+                    let unwind = catch_unwind(off_closure);
+
+                    let mut data = Some((unwind, main_closure));
+
+                    unsafe {
+                        queue_main_unsafe({
+                            move || {
+                                let Some((unwind, main_closure)) = data.take() else {
+                                    return;
+                                };
+                                let Some(layout) = layout_weak.get().upgrade() else {
+                                    return;
+                                };
+                                let mut layout = layout.borrow_mut();
+                                match unwind {
+                                    Ok(Ok(result)) => {
+                                        main_closure(result);
+                                        let msg = layout.messages.finished;
+                                        layout.finish_fetch(msg);
+                                    }
+                                    Ok(Err(e)) => {
+                                        let msg = format!(
+                                            "{}\n{}",
+                                            layout.messages.error_getting_log_data, e
+                                        );
+                                        layout.finish_fetch(&msg);
+                                    }
+                                    Err(panic) => {
+                                        let message = if let Some(s) = panic.downcast_ref::<&str>()
+                                        {
+                                            s
+                                        } else if let Some(s) = panic.downcast_ref::<String>() {
+                                            s
+                                        } else {
+                                            "Unknown panic"
+                                        };
+                                        let msg = format!(
+                                            "{}\n{}",
+                                            layout.messages.error_getting_log_data, message
+                                        );
+                                        layout.finish_fetch(&msg);
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
+            });
+        }
+
+        layout.save_to_file.on_clicked({
+            let data = data.clone();
+            let layout_weak = Rc::downgrade(layout_rc);
+            move |_| {
+                let Some(layout) = layout_weak.upgrade() else {
+                    return;
+                };
+                let mut layout = layout.borrow_mut();
+                //let Some(path) = win.save_file() else {
+                let Some(path) = rfd::FileDialog::new()
+                    .set_file_name("log.txt")
+                    .add_filter(layout.messages.text_files_star_txt, &["txt"])
+                    .save_file()
+                else {
+                    return;
+                };
+                let Some(&selecting) = layout.table.selection().get(0) else {
+                    return;
+                };
+                let Some(pid) = data
+                    .borrow()
+                    .unity_process
+                    .get(selecting as usize)
+                    .map(|x| x.pid())
+                else {
+                    return;
+                };
+
+                let config = create_config(&layout);
+
+                layout.start_fetch();
+                run_other_thread(
+                    layout_weak.clone(),
+                    move || {
+                        let result = run_console_log_saver(pid, &config);
+                        std::fs::write(path, result.unwrap())
                     },
-                ),
-            );
+                    |_| {},
+                );
+            }
+        });
+        layout.copy_to_clipboard.on_clicked({
+            let data = data.clone();
+            let layout_weak = Rc::downgrade(layout_rc);
+            move |_| {
+                let Some(layout) = layout_weak.upgrade() else {
+                    return;
+                };
+                let mut layout = layout.borrow_mut();
+                let Some(&selecting) = layout.table.selection().get(0) else {
+                    return;
+                };
+                let Some(pid) = data
+                    .borrow()
+                    .unity_process
+                    .get(selecting as usize)
+                    .map(|x| x.pid())
+                else {
+                    return;
+                };
 
-            fonts.families.insert(
-                egui::FontFamily::Proportional,
-                vec!["Noto-Sans-JP".to_owned()],
-            );
+                let config = create_config(&layout);
 
-            ctx.egui_ctx.set_fonts(fonts);
+                layout.start_fetch();
 
-            Ok(Box::new(ConsoleLogSaverGui::new()))
-        }),
-    )
+                run_other_thread(
+                    layout_weak.clone(),
+                    move || run_console_log_saver(pid, &config),
+                    move |r| {
+                        arboard::Clipboard::new().unwrap().set_text(r).unwrap();
+                    },
+                );
+            }
+        });
+    }
+
+    // Actually put the button in the window
+    win.set_child(layout.borrow().vbox.clone());
+
+    // Show the window
+    win.show();
+    // Run the application
+    ui.main();
+}
+
+struct UnityProcessList {
+    unity_process: Vec<UnityProcess>,
+}
+
+impl UnityProcessList {
+    fn new() -> UnityProcessList {
+        UnityProcessList {
+            unity_process: Vec::new(),
+        }
+    }
+
+    fn reload_unity(&mut self, model: &mut TableModel) {
+        let prev_data = std::mem::replace(&mut self.unity_process, find_unity_processes());
+        self.unity_process = find_unity_processes();
+
+        let mut prev_pid_iter = prev_data.iter();
+        let mut new_iter = self.unity_process.iter();
+
+        let mut index = 0;
+        loop {
+            match (prev_pid_iter.next(), new_iter.next()) {
+                (Some(prev), Some(new)) if prev.pid() == new.pid() => {
+                    if prev.project_path() != new.project_path() {
+                        model.notify_row_changed(index)
+                    }
+                    index += 1;
+                }
+
+                (Some(_), Some(_)) => {
+                    // pid changed, we should consider as added and inserted
+                    model.notify_row_deleted(index);
+                    model.notify_row_inserted(index);
+                    index += 1;
+                }
+
+                (Some(_), None) => {
+                    model.notify_row_deleted(index);
+                }
+
+                (None, Some(_)) => {
+                    model.notify_row_inserted(index);
+                    index += 1;
+                }
+
+                (None, None) => break,
+            }
+        }
+
+        println!("unity process found: {:?}", &self.unity_process);
+    }
+}
+
+impl TableDataSource for UnityProcessList {
+    fn num_columns(&mut self) -> i32 {
+        2
+    }
+
+    fn num_rows(&mut self) -> i32 {
+        self.unity_process.len().try_into().unwrap_or(i32::MAX)
+    }
+
+    fn column_type(&mut self, column: i32) -> TableValueType {
+        match column {
+            0 => TableValueType::String,
+            1 => TableValueType::String,
+            _ => unreachable!(),
+        }
+    }
+
+    fn cell(&mut self, column: i32, row: i32) -> TableValue {
+        let row = &self.unity_process[row as usize];
+        match column {
+            0 => TableValue::String(row.pid().to_string()),
+            1 => TableValue::String(format!(
+                "{} ({})",
+                row.project_path().file_name().unwrap().to_string_lossy(),
+                row.project_path().to_string_lossy()
+            )),
+            _ => unreachable!(),
+        }
+    }
+
+    fn set_cell(&mut self, _: i32, _: i32, _: TableValue) {
+        // unsupported
+    }
+}
+
+struct LayoutSender(*const RefCell<UILayout>);
+unsafe impl Send for LayoutSender {}
+unsafe impl Sync for LayoutSender {}
+
+impl LayoutSender {
+    fn new(layout: Weak<RefCell<UILayout>>) -> LayoutSender {
+        LayoutSender(layout.into_raw())
+    }
+
+    unsafe fn get(&self) -> Weak<RefCell<UILayout>> {
+        Weak::from_raw(self.0)
+    }
+}
+
+pub unsafe fn queue_main_unsafe<F: FnMut() + 'static>(callback: F) {
+    /// Transmutes a raw mutable pointer into a mutable reference.
+    pub unsafe fn from_void_ptr<'ptr, F>(ptr: *mut c_void) -> &'ptr mut F {
+        unsafe { std::mem::transmute(ptr) }
+    }
+
+    /// Places any value on the heap, producing a heap pointer to it.
+    /// Can leak memory if the pointer is never freed.
+    pub fn to_heap_ptr<F>(item: F) -> *mut c_void {
+        Box::into_raw(Box::new(item)) as *mut c_void
+    }
+
+    extern "C" fn c_callback<G: FnMut()>(data: *mut c_void) {
+        unsafe {
+            from_void_ptr::<G>(data)();
+        }
+    }
+
+    unsafe {
+        libui_ffi::uiQueueMain(Some(c_callback::<F>), to_heap_ptr(callback));
+    }
+}
+
+fn create_config(layout: &UILayout) -> ConsoleLogSaverConfig {
+    let mut config = ConsoleLogSaverConfig::default();
+    config.hide_os_info = layout.hide_os_info.checked();
+    config.hide_user_name = layout.hide_user_name.checked();
+    config.hide_user_home = layout.hide_user_home_path.checked();
+    config.hide_aws_upload_signature = layout.hide_aws_upload_signature.checked();
+    config
+}
+
+struct UILayout {
+    language: Combobox,
+    table: Table,
+    refresh_unity_list: Button,
+    security_settings_group: Group,
+    unity_version_required: Checkbox,
+    hide_os_info: Checkbox,
+    hide_user_name: Checkbox,
+    hide_user_home_path: Checkbox,
+    hide_aws_upload_signature: Checkbox,
+    save_to_file: Button,
+    copy_to_clipboard: Button,
+    vbox: VerticalBox,
+    progress_txt: Label,
+    progress_bar: ProgressBar,
+    messages: &'static Messages,
+}
+
+impl UILayout {
+    fn new(ui: &UI, table_model: Rc<RefCell<TableModel>>) -> Rc<RefCell<Self>> {
+        let m = Messages::en();
+
+        let result = Rc::<RefCell<Self>>::new({
+            let mut vbox = VerticalBox::new();
+            vbox.set_padded(true);
+
+            let language = Combobox::new();
+            vbox.append(language.clone(), LayoutStrategy::Compact);
+
+            let parameters = TableParameters::new(table_model);
+            let mut table = Table::new(parameters);
+            table.append_text_column(m.pid, 0, Table::COLUMN_READONLY);
+            table.append_text_column(m.project_name_project_path, 1, Table::COLUMN_READONLY);
+            table.set_column_width(1, 1000);
+            table.set_selection_mode(SelectionMode::ZeroOrOne);
+            vbox.append(table.clone(), LayoutStrategy::Stretchy);
+
+            let refresh_unity_list = Button::new("");
+            vbox.append(refresh_unity_list.clone(), LayoutStrategy::Compact);
+
+            let mut security_settings_box = VerticalBox::new();
+            let mut security_settings_group = Group::new("");
+
+            let mut unity_version_required = Checkbox::new("");
+            unity_version_required.disable();
+            security_settings_box.append(unity_version_required.clone(), LayoutStrategy::Compact);
+
+            let hide_os_info = Checkbox::new("");
+            security_settings_box.append(hide_os_info.clone(), LayoutStrategy::Compact);
+
+            let hide_user_name = Checkbox::new("");
+            security_settings_box.append(hide_user_name.clone(), LayoutStrategy::Compact);
+
+            let hide_user_home_path = Checkbox::new("");
+            security_settings_box.append(hide_user_home_path.clone(), LayoutStrategy::Compact);
+
+            let hide_aws_upload_signature = Checkbox::new("");
+            security_settings_box
+                .append(hide_aws_upload_signature.clone(), LayoutStrategy::Compact);
+
+            security_settings_group.set_child(security_settings_box);
+            vbox.append(security_settings_group.clone(), LayoutStrategy::Compact);
+
+            let progress_txt = Label::new("");
+            vbox.append(progress_txt.clone(), LayoutStrategy::Compact);
+
+            let mut progress_bar = ProgressBar::new();
+            progress_bar.hide();
+            progress_bar.set_value(ProgressBarValue::Indeterminate);
+            vbox.append(progress_bar.clone(), LayoutStrategy::Compact);
+
+            let save_to_file = Button::new("");
+            vbox.append(save_to_file.clone(), LayoutStrategy::Compact);
+
+            let copy_to_clipboard = Button::new("");
+            vbox.append(copy_to_clipboard.clone(), LayoutStrategy::Compact);
+
+            RefCell::new(UILayout {
+                language,
+                table,
+                refresh_unity_list,
+                security_settings_group,
+                unity_version_required,
+                hide_os_info,
+                hide_user_name,
+                hide_user_home_path,
+                hide_aws_upload_signature,
+                save_to_file,
+                copy_to_clipboard,
+                vbox,
+                progress_txt,
+                progress_bar,
+                messages: Messages::en(),
+            })
+        });
+
+        // add event handlers
+        {
+            let mut layout = result.borrow_mut();
+
+            for &x in SupportedLocale::values() {
+                layout
+                    .language
+                    .append(Messages::get_by_locale(x).locale_name);
+            }
+            layout.language.set_selected(0);
+            layout.language.on_selected(ui, {
+                let weak = Rc::downgrade(&result);
+                move |idx| {
+                    let messages = Messages::get_by_locale(SupportedLocale::values()[idx as usize]);
+                    if let Some(layout) = weak.upgrade() {
+                        layout.borrow_mut().set_messages(messages)
+                    }
+                }
+            });
+
+            layout.table.on_selection_changed({
+                let weak = Rc::downgrade(&result);
+                move |table| {
+                    if let Some(layout) = weak.upgrade() {
+                        let mut layout = layout.borrow_mut();
+                        let selection = table.selection();
+                        if selection.len() == 1 {
+                            layout.save_to_file.enable();
+                            layout.copy_to_clipboard.enable();
+                        } else {
+                            layout.save_to_file.disable();
+                            layout.copy_to_clipboard.disable();
+                        }
+                    }
+                }
+            });
+
+            layout.save_to_file.disable();
+            layout.copy_to_clipboard.disable();
+
+            // set default values
+            let default_config = ConsoleLogSaverConfig::default();
+            layout.hide_os_info.set_checked(default_config.hide_os_info);
+            layout
+                .hide_user_name
+                .set_checked(default_config.hide_user_name);
+            layout
+                .hide_user_home_path
+                .set_checked(default_config.hide_user_home);
+            layout
+                .hide_aws_upload_signature
+                .set_checked(default_config.hide_aws_upload_signature);
+
+            layout.set_messages(Messages::en());
+        }
+
+        result
+    }
+
+    fn set_messages(&mut self, m: &'static Messages) {
+        self.refresh_unity_list.set_text(m.refresh_unity_list);
+
+        self.security_settings_group
+            .set_title(self.messages.security_settings);
+        self.unity_version_required
+            .set_text(m.unity_version_required);
+        self.hide_os_info.set_text(m.hide_os_info);
+        self.hide_user_name.set_text(m.hide_user_name);
+        self.hide_user_home_path.set_text(m.hide_user_home_path);
+        self.hide_aws_upload_signature
+            .set_text(m.hide_aws_upload_signature);
+        self.save_to_file.set_text(m.save_to_file);
+        self.copy_to_clipboard.set_text(m.copy_to_clipboard);
+        self.messages = m;
+    }
+
+    fn start_fetch(&mut self) {
+        self.progress_txt.set_text(self.messages.fetching_log);
+        self.progress_txt.show();
+        self.progress_bar.show();
+        self.vbox.disable();
+    }
+
+    fn finish_fetch(&mut self, message: &str) {
+        self.progress_txt.set_text(message);
+        self.progress_bar.hide();
+        self.vbox.enable();
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -48,12 +522,24 @@ impl SupportedLocale {
     fn values() -> &'static [SupportedLocale] {
         &[SupportedLocale::English, SupportedLocale::Japanese]
     }
+
+    fn default() -> SupportedLocale {
+        for locale in sys_locale::get_locales() {
+            if locale.starts_with("en") {
+                return SupportedLocale::English;
+            }
+            if locale.starts_with("ja") {
+                return SupportedLocale::English;
+            }
+        }
+
+        SupportedLocale::English
+    }
 }
 
 #[derive(Copy, Clone)]
 struct Messages {
     locale_name: &'static str,
-    console_log_saver: &'static str,
     pid: &'static str,
     project_name_project_path: &'static str,
     refresh_unity_list: &'static str,
@@ -68,9 +554,7 @@ struct Messages {
     copy_to_clipboard: &'static str,
     finished: &'static str,
     error_getting_log_data: &'static str,
-    close: &'static str,
     fetching_log: &'static str,
-    this_may_take_several_tens_of_seconds: &'static str,
 }
 
 impl Messages {
@@ -78,7 +562,6 @@ impl Messages {
         &const {
             Self {
                 locale_name: "English",
-                console_log_saver: "Console Log Saver",
                 pid: "PID",
                 project_name_project_path: "Project Name (Project Path)",
                 refresh_unity_list: "Refresh Unity List",
@@ -93,9 +576,7 @@ impl Messages {
                 copy_to_clipboard: "Copy to Clipboard",
                 finished: "Finished!",
                 error_getting_log_data: "Error getting log data",
-                close: "Close",
-                fetching_log: "Fetching log...",
-                this_may_take_several_tens_of_seconds: "This may take several tens of seconds...",
+                fetching_log: "Fetching log...\nThis may take several tens of seconds...",
             }
         }
     }
@@ -118,9 +599,7 @@ impl Messages {
                 copy_to_clipboard: "コピーする",
                 finished: "完了!",
                 error_getting_log_data: "エラーが発生しました",
-                close: "閉じる",
-                fetching_log: "ログを取得中...",
-                this_may_take_several_tens_of_seconds: "数十秒かかることがあります...",
+                fetching_log: "ログを取得中...\n数十秒かかることがあります...",
                 ..*Self::en()
             }
         }
@@ -130,266 +609,6 @@ impl Messages {
         match locale {
             SupportedLocale::English => Self::en(),
             SupportedLocale::Japanese => Self::ja(),
-        }
-    }
-}
-
-enum ClsThreadState {
-    NoThread,
-    Running(std::thread::JoinHandle<Result<(), String>>),
-    Succeeded,
-    Error(String),
-}
-
-enum ClsThreadInfo {
-    Running,
-    Succeeded,
-    Error(String),
-}
-
-impl ClsThreadState {
-    fn to_state_mut(&mut self) -> Option<ClsThreadInfo> {
-        match self {
-            ClsThreadState::NoThread => None,
-            ClsThreadState::Running(running) if !running.is_finished() => {
-                Some(ClsThreadInfo::Running)
-            }
-            ClsThreadState::Running(_) => {
-                // it's marked running, but is actually finished so get result
-                let state = std::mem::replace(self, ClsThreadState::Error("panic getting result".into()));
-                let ClsThreadState::Running(running) = state else {
-                    unreachable!()
-                };
-                *self = match running.join() {
-                    Ok(Ok(())) => ClsThreadState::Succeeded,
-                    Ok(Err(msg)) => ClsThreadState::Error(msg),
-                    Err(panic) => {
-                        if let Some(s) = panic.downcast_ref::<&str>() {
-                            ClsThreadState::Error(s.to_string())
-                        } else if let Some(s) = panic.downcast_ref::<String>() {
-                            ClsThreadState::Error(s.to_string())
-                        } else {
-                            ClsThreadState::Error("Unknown panic (non string/str payload)".into())
-                        }
-                    }
-                };
-                // run again
-                self.to_state_mut()
-            }
-            ClsThreadState::Succeeded => Some(ClsThreadInfo::Succeeded),
-            ClsThreadState::Error(msg) => Some(ClsThreadInfo::Error(msg.clone())),
-        }
-    }
-
-    pub(crate) fn exists(&self) -> bool {
-        !matches!(self, ClsThreadState::NoThread)
-    }
-}
-
-struct ConsoleLogSaverGui {
-    unity_process: Vec<UnityProcess>,
-    selected_pid: Option<ProcessId>,
-    config: ConsoleLogSaverConfig,
-    cls_thread: ClsThreadState,
-    to_copy: std::sync::Arc<std::sync::Mutex<Option<String>>>,
-    locale: SupportedLocale,
-}
-
-impl ConsoleLogSaverGui {
-    fn new() -> Self {
-        fn language_default() -> SupportedLocale {
-            for locale in sys_locale::get_locales() {
-                if locale.starts_with("en") {
-                    return SupportedLocale::English;
-                }
-                if locale.starts_with("ja") {
-                    return SupportedLocale::English;
-                }
-            }
-
-            SupportedLocale::English
-        }
-
-        let mut result = Self {
-            unity_process: Vec::new(),
-            config: Default::default(),
-            cls_thread: ClsThreadState::NoThread,
-            selected_pid: None,
-            to_copy: std::sync::Arc::new(std::sync::Mutex::new(None)),
-            locale: language_default(),
-        };
-
-        result.reload_unity();
-
-        result
-    }
-
-    fn reload_unity(&mut self) {
-        self.unity_process = find_unity_processes();
-        self.selected_pid = None;
-    }
-}
-
-impl eframe::App for ConsoleLogSaverGui {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let m = Messages::get_by_locale(self.locale);
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if self.cls_thread.exists() {
-                ui.disable()
-            }
-
-            ui.heading(m.console_log_saver);
-
-            egui::ComboBox::from_id_salt("language")
-                .selected_text(m.locale_name)
-                .show_ui(ui, |ui| {
-                    for &x in SupportedLocale::values() {
-                        ui.selectable_value(
-                            &mut self.locale,
-                            x,
-                            Messages::get_by_locale(x).locale_name,
-                        );
-                    }
-                });
-
-            egui_extras::TableBuilder::new(ui)
-                .striped(true)
-                .max_scroll_height(200.0)
-                .column(Column::auto())
-                .column(Column::remainder())
-                .header(20.0, |mut header| {
-                    header.col(|ui| {
-                        ui.label(m.pid);
-                    });
-                    header.col(|ui| {
-                        ui.label(m.project_name_project_path);
-                    });
-                })
-                .body(|body| {
-                    body.rows(20.0, self.unity_process.len(), |mut row| {
-                        let x = &self.unity_process[row.index()];
-                        row.set_selected(Some(x.pid()) == self.selected_pid);
-                        row.col(|ui| {
-                            if ui.label(x.pid().to_string()).clicked() {
-                                self.selected_pid = Some(x.pid());
-                            }
-                        });
-                        row.col(|ui| {
-                            if ui.label(x.project_path().display().to_string()).clicked() {
-                                self.selected_pid = Some(x.pid());
-                            }
-                        });
-                    });
-                });
-
-            if ui.button(m.refresh_unity_list).clicked() {
-                self.reload_unity();
-            }
-
-            // TODO: version info
-
-            ui.label(m.security_settings);
-            egui::ScrollArea::vertical()
-                .id_salt("Security Settings")
-                .show(ui, |ui| {
-                    ui.add_enabled_ui(false, |ui| {
-                        let mut unchangeable = true;
-                        ui.checkbox(&mut unchangeable, m.unity_version_required);
-                    });
-                    ui.checkbox(&mut self.config.hide_os_info, m.hide_os_info);
-                    ui.checkbox(&mut self.config.hide_user_name, m.hide_user_name);
-                    ui.checkbox(&mut self.config.hide_user_home, m.hide_user_home_path);
-                    ui.checkbox(
-                        &mut self.config.hide_aws_upload_signature,
-                        m.hide_aws_upload_signature,
-                    );
-                });
-
-            ui.add_enabled_ui(self.selected_pid.is_some(), |ui| {
-                if ui.button(m.save_to_file).clicked() {
-                    let pid = self.selected_pid.unwrap();
-                    if let Some(path) = rfd::FileDialog::new()
-                        .set_file_name("logfile.txt")
-                        .add_filter(m.text_files_star_txt, &["txt"])
-                        .save_file()
-                    {
-                        let config = self.config.clone();
-                        self.cls_thread = ClsThreadState::Running(
-                            std::thread::Builder::new()
-                                .spawn(move || {
-                                    let log = run_console_log_saver(pid, &config)
-                                        .map_err(|x| x.to_string())?;
-                                    std::fs::write(path, log)
-                                        .map_err(|x| format!("failed to save file: {}", x))?;
-                                    Ok(())
-                                })
-                                .expect("TODO: error handling"),
-                        );
-                    }
-                }
-
-                if ui.button(m.copy_to_clipboard).clicked() {
-                    let pid = self.selected_pid.unwrap();
-                    let config = self.config.clone();
-                    let clipboard_arc = self.to_copy.clone();
-                    self.cls_thread = ClsThreadState::Running(
-                        std::thread::Builder::new()
-                            .spawn(move || {
-                                let log = run_console_log_saver(pid, &config)
-                                    .map_err(|x| x.to_string())?;
-                                clipboard_arc.lock().unwrap().replace(log);
-                                Ok(())
-                            })
-                            .expect("TODO: error handling"),
-                    );
-                }
-            });
-        });
-
-        if let Some(info) = self.cls_thread.to_state_mut() {
-            let mut always_open = true;
-            let rect = ctx.input(|x| x.screen_rect());
-            egui::Window::new("")
-                .title_bar(false)
-                .resizable(false)
-                .pivot(egui::Align2::CENTER_CENTER)
-                .fixed_pos((rect.width() / 2.0, rect.height() / 2.0))
-                .open(&mut always_open)
-                .show(ctx, |ui| {
-                    match info {
-                        ClsThreadInfo::Running => {
-                            ui.vertical_centered(|ui| {
-                                egui::Spinner::new().ui(ui);
-                                ui.label(m.fetching_log);
-                                ui.label(m.this_may_take_several_tens_of_seconds);
-                            });
-                        }
-                        ClsThreadInfo::Succeeded => {
-                            ui.vertical_centered(|ui| {
-                                ui.label(m.finished);
-                                if ui.button(m.close).clicked() {
-                                    self.cls_thread = ClsThreadState::NoThread;
-                                }
-                            });
-                        }
-                        ClsThreadInfo::Error(msg) => {
-                            ui.vertical_centered(|ui| {
-                                ui.label(m.error_getting_log_data);
-                                ui.label(msg);
-                                if ui.button(m.close).clicked() {
-                                    self.cls_thread = ClsThreadState::NoThread;
-                                }
-                            });
-                        }
-                    }
-                });
-        }
-
-        if let Ok(mut to_clip) = self.to_copy.try_lock() {
-            if let Some(to_clip) = to_clip.take() {
-                ctx.output_mut(|o| o.copied_text = to_clip);
-            }
         }
     }
 }

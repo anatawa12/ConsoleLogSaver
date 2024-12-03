@@ -13,6 +13,7 @@ use std::ops::Deref;
 use std::path::Component;
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
 
+#[derive(Debug)]
 pub struct UnityProcess {
     pid: ProcessId,
     project_path: std::path::PathBuf,
@@ -74,6 +75,8 @@ pub fn find_unity_processes() -> Vec<UnityProcess> {
             project_path: project_path.to_owned(),
         })
     }
+
+    unity_processes.sort_by_key(|x| x.pid);
 
     unity_processes
 }

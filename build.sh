@@ -175,7 +175,7 @@ export LLDB_INCLUDE_DIRS
 
 export LLDB_LIB_DIR
 
-if [ "$OS" = "macos" ]; then
+if [ "$OS" = "macos" ] || [ "$OS" = "linux" ]; then
   export LLDB_BUNDLE_DEBUGSERVER_PATH="${LLDB_DEBUGSERVER_PATH}"
 fi
 

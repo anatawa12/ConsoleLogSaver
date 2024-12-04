@@ -2,42 +2,58 @@
 
 set -eu
 
+# utilities
+
+download_if_not_exists() {
+  if ! [ -f "$2" ]; then
+    echo "downloading $1..."
+
+    curl -L "$1" -o "$2.part"
+    mv "$2.part" "$2"
+
+    if [ -n "${3:-}" ]; then
+      rm -rf "$3"
+    fi
+  fi
+}
+
+extract_if_not_exists() {
+  _tar_file="$1"
+  _dest_dir="$2"
+  shift 2
+
+  if [ -f "$_dest_dir/.progress" ] || [ ! -d "$_dest_dir" ]; then
+    echo "extracting $(basename "$_tar_file")..."
+    rm -rf "$_dest_dir"
+    mkdir -p "$_dest_dir"
+  
+    echo > "$_dest_dir/.progress"
+  
+    tar -x -z -f "$_tar_file" -C "$_dest_dir" "$@"
+  
+    rm -f "$_dest_dir/.progress"
+  fi
+}
+
 . "$(dirname "$0")/build-lldb-info.sh"
 LLVM_ARCHIVE_URL="https://github.com/anatawa12/llvm-project/archive/${LLVM_COMMIT}.tar.gz"
 
 PROJECT_DIR="$(pwd)"
 LLVM_DIR="${PROJECT_DIR}/llvm"
 
-LLVM_LOCAL_TAR_GZ="$LLVM_DIR/download/$LLVM_COMMIT.tar.gz"
+LLVM_DOWNLOAD="$LLVM_DIR/download"
+LLVM_TEMP="$LLVM_DIR/tmp"
+LLVM_LOCAL_TAR_GZ="$LLVM_DOWNLOAD/$LLVM_COMMIT.tar.gz"
 LLVM_SRC_DIR="$LLVM_DIR/src"
 LLVM_BUILD_DIR="$LLVM_DIR/build"
 
 mkdir -p "$LLVM_DIR/"
 mkdir -p "$LLVM_DIR/download"
 
-if ! [ -f "$LLVM_LOCAL_TAR_GZ" ]; then
-  echo "downloading $LLVM_ARCHIVE_URL..."
+download_if_not_exists "$LLVM_ARCHIVE_URL" "$LLVM_LOCAL_TAR_GZ" "$LLVM_SRC_DIR"
 
-  curl -L "$LLVM_ARCHIVE_URL" -o "$LLVM_LOCAL_TAR_GZ.part"
-  mv "$LLVM_LOCAL_TAR_GZ.part" "$LLVM_LOCAL_TAR_GZ"
-
-  # clear src dir to ensure to extract
-  rm -rf "$LLVM_SRC_DIR"
-fi
-
-EXTRACT_PROGRESS_FILE="$LLVM_SRC_DIR/.progress"
-if [ -f "$EXTRACT_PROGRESS_FILE" ] || [ ! -d "$LLVM_SRC_DIR/cmake" ] || [ ! -d "$LLVM_SRC_DIR/llvm" ] || [ ! -d "$LLVM_SRC_DIR/lldb" ]; then
-  echo "extracting ..."
-  rm -rf "$LLVM_SRC_DIR"
-  mkdir -p "$LLVM_SRC_DIR"
-
-  echo > "$EXTRACT_PROGRESS_FILE"
-
-  TAR_PREFIX="llvm-project-$LLVM_COMMIT"
-  tar --strip-components=1 -x -z -f "$LLVM_LOCAL_TAR_GZ" -C "$LLVM_SRC_DIR" "$TAR_PREFIX/cmake/" "$TAR_PREFIX/llvm/" "$TAR_PREFIX/lldb/"
-
-  rm -f "$EXTRACT_PROGRESS_FILE"
-fi
+TAR_PREFIX="llvm-project-$LLVM_COMMIT"
+extract_if_not_exists "$LLVM_LOCAL_TAR_GZ" "$LLVM_SRC_DIR" --strip-components=1 "$TAR_PREFIX/cmake/" "$TAR_PREFIX/llvm/" "$TAR_PREFIX/lldb/"
 
 #CMAKE_BUILD_TYPE=Debug
 CMAKE_BUILD_TYPE=Release
@@ -45,21 +61,24 @@ CMAKE_BUILD_TYPE=Release
 case $(uname) in
   Darwin*)
     TARGET_ARCH='AArch64;X86'
-    BUILD_TARGETS='liblldb debugserver'
+    BUILD_TARGETS='liblldb'
     lib_prefix=lib
     lib_suffix=.a
+    OS=macos
     ;;
   Linux*)
     TARGET_ARCH='X86'
     BUILD_TARGETS='liblldb'
     lib_prefix=lib
     lib_suffix=.a
+    OS=linux
     ;;
   MINGW* )
     TARGET_ARCH='X86'
     BUILD_TARGETS='liblldb'
     lib_prefix=
     lib_suffix=.lib
+    OS=linux
 
     # utilities
     get_registry() {
@@ -235,11 +254,39 @@ cmake_install_headers() {
 cmake_install_headers llvm-headers "$LLVM_BUILD_DIR/cmake_install.cmake" > /dev/null
 cmake_install_headers lldb-headers "$LLVM_BUILD_DIR/tools/lldb/cmake_install.cmake" > /dev/null
 
+if [ "$OS" = macos ]; then
+  # for macOS, we have to download two binary and merge then
+  ARM64_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${DEBUGSERVER_LLVM_RELEASE}/LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-ARM64.tar.xz"
+  X64_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${DEBUGSERVER_LLVM_RELEASE}/LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-X64.tar.xz"
+
+  ARM64_TAR_XZ="$LLVM_DOWNLOAD/llvm-macos-arm64-${DEBUGSERVER_LLVM_RELEASE}-bin.tar.gz"
+  X64_TAR_XZ="$LLVM_DOWNLOAD/llvm-macos-x64-${DEBUGSERVER_LLVM_RELEASE}-bin.tar.gz"
+
+  ARM64_EXTRACT="$LLVM_TEMP/macos-arm64"
+  X64_EXTRACT="$LLVM_TEMP/macos-x64"
+
+  download_if_not_exists "$ARM64_URL" "$ARM64_TAR_XZ"
+  download_if_not_exists "$X64_URL" "$X64_TAR_XZ"
+
+  extract_if_not_exists "$ARM64_TAR_XZ" "$ARM64_EXTRACT" --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-ARM64/bin/debugserver"
+  extract_if_not_exists "$X64_TAR_XZ" "$X64_EXTRACT" --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-X64/bin/debugserver"
+
+  mkdir -p "$LLVM_DIR/bin"
+  lipo -create -output "$LLVM_DIR/bin/debugserver" "$ARM64_EXTRACT/bin/debugserver" "$X64_EXTRACT/bin/debugserver"
+elif [ "$OS" = linux ]; then
+  # for linux, just download binary
+  LLVM_BINARY_ARCHIVE_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${DEBUGSERVER_LLVM_RELEASE}/LLVM-${DEBUGSERVER_LLVM_RELEASE}-Linux-X64.tar.xz"
+  BIN_TAR_XZ="$LLVM_DOWNLOAD/llvm-linux-x64-${DEBUGSERVER_LLVM_RELEASE}-bin.tar.gz"
+  BIN_EXTRACT="$LLVM_TEMP/linux-x64"
+  download_if_not_exists "$LLVM_BINARY_ARCHIVE_URL" "$BIN_TAR_XZ"
+  extract_if_not_exists "$BIN_TAR_XZ" "$BIN_EXTRACT" --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-Linux-X64/bin/lldb-server"
+  mkdir -p "$LLVM_DIR/bin"
+  cp "$BIN_EXTRACT/bin/lldb-server" "$LLVM_DIR/bin/debugserver"
+fi
+
 echo "installing library / binary files" >&2
 
 lib_dir="$LLVM_DIR/lib"
 mkdir -p "$LLVM_DIR/lib"
 find "$LLVM_BUILD_DIR/lib" -type f -name "${lib_prefix}*${lib_suffix}" -exec cp {} "$lib_dir" ';'
 mkdir -p "$LLVM_DIR/bin"
-cp "$LLVM_BUILD_DIR/bin/debugserver" "$LLVM_DIR/bin" || :
-cp "$LLVM_BUILD_DIR/bin/lldb-server" "$LLVM_DIR/bin" || :

@@ -29,7 +29,7 @@ extract_if_not_exists() {
   
     echo > "$_dest_dir/.progress"
   
-    tar -x -z -f "$_tar_file" -C "$_dest_dir" "$@"
+    tar -x -f "$_tar_file" -C "$_dest_dir" "$@"
   
     rm -f "$_dest_dir/.progress"
   fi
@@ -53,7 +53,7 @@ mkdir -p "$LLVM_DIR/download"
 download_if_not_exists "$LLVM_ARCHIVE_URL" "$LLVM_LOCAL_TAR_GZ" "$LLVM_SRC_DIR"
 
 TAR_PREFIX="llvm-project-$LLVM_COMMIT"
-extract_if_not_exists "$LLVM_LOCAL_TAR_GZ" "$LLVM_SRC_DIR" --strip-components=1 "$TAR_PREFIX/cmake/" "$TAR_PREFIX/llvm/" "$TAR_PREFIX/lldb/"
+extract_if_not_exists "$LLVM_LOCAL_TAR_GZ" "$LLVM_SRC_DIR" -z --strip-components=1 "$TAR_PREFIX/cmake/" "$TAR_PREFIX/llvm/" "$TAR_PREFIX/lldb/"
 
 #CMAKE_BUILD_TYPE=Debug
 CMAKE_BUILD_TYPE=Release
@@ -268,8 +268,8 @@ if [ "$OS" = macos ]; then
   download_if_not_exists "$ARM64_URL" "$ARM64_TAR_XZ"
   download_if_not_exists "$X64_URL" "$X64_TAR_XZ"
 
-  extract_if_not_exists "$ARM64_TAR_XZ" "$ARM64_EXTRACT" --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-ARM64/bin/debugserver"
-  extract_if_not_exists "$X64_TAR_XZ" "$X64_EXTRACT" --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-X64/bin/debugserver"
+  extract_if_not_exists "$ARM64_TAR_XZ" "$ARM64_EXTRACT" -J --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-ARM64/bin/debugserver"
+  extract_if_not_exists "$X64_TAR_XZ" "$X64_EXTRACT" -J --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-macOS-X64/bin/debugserver"
 
   mkdir -p "$LLVM_DIR/bin"
   lipo -create -output "$LLVM_DIR/bin/debugserver" "$ARM64_EXTRACT/bin/debugserver" "$X64_EXTRACT/bin/debugserver"
@@ -279,7 +279,7 @@ elif [ "$OS" = linux ]; then
   BIN_TAR_XZ="$LLVM_DOWNLOAD/llvm-linux-x64-${DEBUGSERVER_LLVM_RELEASE}-bin.tar.gz"
   BIN_EXTRACT="$LLVM_TEMP/linux-x64"
   download_if_not_exists "$LLVM_BINARY_ARCHIVE_URL" "$BIN_TAR_XZ"
-  extract_if_not_exists "$BIN_TAR_XZ" "$BIN_EXTRACT" --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-Linux-X64/bin/lldb-server"
+  extract_if_not_exists "$BIN_TAR_XZ" "$BIN_EXTRACT" -J --strip-components 1 "LLVM-${DEBUGSERVER_LLVM_RELEASE}-Linux-X64/bin/lldb-server"
   mkdir -p "$LLVM_DIR/bin"
   cp "$BIN_EXTRACT/bin/lldb-server" "$LLVM_DIR/bin/debugserver"
 fi

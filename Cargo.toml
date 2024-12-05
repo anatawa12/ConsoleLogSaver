@@ -21,6 +21,8 @@ sys-locale = { version = "0.3.2", optional = true }
 libui = { git = "https://github.com/libui-rs/libui", version = "0.3.0", rev = '07155974', optional = true }
 libui-ffi = { git = "https://github.com/libui-rs/libui", version = "0.3.0", rev = '07155974', optional = true }
 arboard = { version = "3.4.1", default-features = false, optional = true }
+ureq = { version = "2.12.1", default-features = false, features = ["native-certs", "tls"] }
+open = "5.3.1"
 
 [[bin]]
 name = "ConsoleLogSaverCli"

@@ -1,3 +1,4 @@
+mod check_for_update;
 mod cls_file;
 mod process_remote;
 
@@ -6,12 +7,15 @@ pub use crate::process_remote::ProcessId;
 use crate::process_remote::ProcessRemoteError::NonUtf8LogContents;
 use crate::process_remote::{base_err, ProcessRemoteError};
 use byteorder::{NativeEndian, ReadBytesExt};
+pub use check_for_update::check_for_update;
 use regex::Regex;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::ops::Deref;
 use std::path::Component;
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
+
+pub static CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug)]
 pub struct UnityProcess {

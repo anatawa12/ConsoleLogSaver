@@ -6,11 +6,11 @@ use libui::controls::{
     TableDataSource, TableModel, TableParameters, TableValue, TableValueType, VerticalBox,
 };
 use libui::prelude::*;
+use std::any::Any;
 use std::cell::RefCell;
 use std::os::raw::c_void;
 use std::panic::{catch_unwind, UnwindSafe};
 use std::rc::{Rc, Weak};
-use std::result::Result;
 
 fn main() {
     let ui = UI::init().expect("Couldn't initialize UI library");
@@ -33,6 +33,31 @@ fn main() {
     {
         let layout_rc = &layout;
         let mut layout = layout.borrow_mut();
+
+        layout.download_latest_version.on_clicked(|_| {
+            open::that("https://github.com/anatawa12/ConsoleLogSaver#readme").ok();
+        });
+
+        run_other_thread(
+            Rc::downgrade(layout_rc),
+            || check_for_update(),
+            |layout, option| {
+                let mut layout = layout.borrow_mut();
+                if let Some((outdated, latest)) = option {
+                    if outdated {
+                        layout.this_is_outdated(&latest);
+                    } else {
+                        layout.this_is_latest()
+                    }
+                } else {
+                    layout.failed_to_get_latest()
+                }
+            },
+            |layout, _| {
+                let mut layout = layout.borrow_mut();
+                layout.failed_to_get_latest()
+            },
+        );
 
         layout.set_messages(Messages::get_by_locale(SupportedLocale::default()));
 
@@ -352,10 +377,19 @@ fn create_config(layout: &UILayout) -> ConsoleLogSaverConfig {
     config
 }
 
+enum VersionInfo {
+    Fetching,
+    Latest,
+    Outdated(String),
+    Error,
+}
+
 struct UILayout {
     language: Combobox,
     table: Table,
     refresh_unity_list: Button,
+    version_info: Label,
+    download_latest_version: Button,
     security_settings_group: Group,
     unity_version_required: Checkbox,
     hide_os_info: Checkbox,
@@ -368,6 +402,7 @@ struct UILayout {
     progress_txt: Label,
     progress_bar: ProgressBar,
     messages: &'static Messages,
+    version_info_state: VersionInfo,
 }
 
 impl UILayout {
@@ -391,6 +426,12 @@ impl UILayout {
 
             let refresh_unity_list = Button::new("");
             vbox.append(refresh_unity_list.clone(), LayoutStrategy::Compact);
+
+            let version_info = Label::new("");
+            vbox.append(version_info.clone(), LayoutStrategy::Compact);
+
+            let download_latest_version = Button::new("");
+            vbox.append(download_latest_version.clone(), LayoutStrategy::Compact);
 
             let mut security_settings_box = VerticalBox::new();
             let mut security_settings_group = Group::new("");
@@ -433,6 +474,8 @@ impl UILayout {
                 language,
                 table,
                 refresh_unity_list,
+                version_info,
+                download_latest_version,
                 security_settings_group,
                 unity_version_required,
                 hide_os_info,
@@ -444,6 +487,7 @@ impl UILayout {
                 vbox,
                 progress_txt,
                 progress_bar,
+                version_info_state: VersionInfo::Fetching,
                 messages: Messages::en(),
             })
         });
@@ -508,7 +552,41 @@ impl UILayout {
     }
 
     fn set_messages(&mut self, m: &'static Messages) {
+        self.messages = m;
+        self.reset_messages();
+    }
+
+    fn reset_messages(&mut self) {
+        let m = self.messages;
         self.refresh_unity_list.set_text(m.refresh_unity_list);
+
+        match &self.version_info_state {
+            VersionInfo::Fetching => {
+                self.version_info.set_text(
+                    &m.version_checking_for_updates
+                        .replace("{0}", CURRENT_VERSION),
+                );
+            }
+            VersionInfo::Latest => {
+                self.version_info
+                    .set_text(&m.version_it_is_latest.replace("{0}", CURRENT_VERSION));
+            }
+            VersionInfo::Outdated(latest_version) => {
+                self.version_info.set_text(
+                    &m.version_found_new_version
+                        .replace("{0}", CURRENT_VERSION)
+                        .replace("{1}", latest_version),
+                );
+            }
+            VersionInfo::Error => {
+                self.version_info.set_text(
+                    &m.version_failed_to_fetch_latest_version
+                        .replace("{0}", CURRENT_VERSION),
+                );
+            }
+        }
+        self.download_latest_version
+            .set_text(m.download_latest_version);
 
         self.security_settings_group
             .set_title(self.messages.security_settings);
@@ -521,7 +599,6 @@ impl UILayout {
             .set_text(m.hide_aws_upload_signature);
         self.save_to_file.set_text(m.save_to_file);
         self.copy_to_clipboard.set_text(m.copy_to_clipboard);
-        self.messages = m;
     }
 
     fn start_fetch(&mut self) {
@@ -535,6 +612,21 @@ impl UILayout {
         self.progress_txt.set_text(message);
         self.progress_bar.hide();
         self.vbox.enable();
+    }
+
+    fn this_is_outdated(&mut self, latest: &str) {
+        self.version_info_state = VersionInfo::Outdated(latest.to_string());
+        self.reset_messages();
+    }
+
+    fn this_is_latest(&mut self) {
+        self.version_info_state = VersionInfo::Latest;
+        self.reset_messages();
+    }
+
+    fn failed_to_get_latest(&mut self) {
+        self.version_info_state = VersionInfo::Error;
+        self.reset_messages();
     }
 }
 
@@ -569,6 +661,11 @@ struct Messages {
     pid: &'static str,
     project_name_project_path: &'static str,
     refresh_unity_list: &'static str,
+    version_checking_for_updates: &'static str,
+    version_it_is_latest: &'static str,
+    version_failed_to_fetch_latest_version: &'static str,
+    version_found_new_version: &'static str,
+    download_latest_version: &'static str,
     security_settings: &'static str,
     unity_version_required: &'static str,
     hide_os_info: &'static str,
@@ -591,6 +688,12 @@ impl Messages {
                 pid: "PID",
                 project_name_project_path: "Project Name (Project Path)",
                 refresh_unity_list: "Refresh Unity List",
+                version_checking_for_updates: "Version {0}. Checking for updates...",
+                version_it_is_latest: "Version {0}. It's Latest.",
+                version_failed_to_fetch_latest_version:
+                    "Version {0} Failed to fetch latest version.",
+                version_found_new_version: "Version {0}. Found new version {1}.",
+                download_latest_version: "Download Latest Version",
                 security_settings: "Security Settings",
                 unity_version_required: "Unity Version (Required)",
                 hide_os_info: "Hide OS Info",

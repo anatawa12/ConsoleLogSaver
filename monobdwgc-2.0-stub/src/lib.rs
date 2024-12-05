@@ -58,6 +58,10 @@ pub extern "C" fn mono_property_get_get_method(prop: *mut MonoProperty) -> *mut 
     unsafe { zeroed() }
 }
 #[no_mangle]
+pub extern "C" fn mono_property_get_set_method(prop: *mut MonoProperty) -> *mut MonoMethod {
+    unsafe { zeroed() }
+}
+#[no_mangle]
 pub extern "C" fn mono_object_new(
     domain: *mut MonoDomain,
     klass: *mut MonoClass,

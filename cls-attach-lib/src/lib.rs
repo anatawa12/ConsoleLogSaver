@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 
 use std::ffi::{c_char, c_int, c_void};
@@ -35,6 +36,7 @@ extern "C" {
         name: *const c_char,
     ) -> *mut MonoProperty;
     fn mono_property_get_get_method(prop: *mut MonoProperty) -> *mut MonoMethod;
+    fn mono_property_get_set_method(prop: *mut MonoProperty) -> *mut MonoMethod;
     fn mono_object_new(domain: *mut MonoDomain, klass: *mut MonoClass) -> *mut MonoObject;
     fn mono_object_to_string(obj: *mut MonoObject, exc: *mut *mut MonoObject) -> *mut MonoString;
     fn mono_runtime_object_init(this_obj: *mut MonoObject);
@@ -132,6 +134,11 @@ impl TransferDataBuilder {
     }
 }
 
+const Collapse: i32 = 1 << 0;
+const LogLevelLog: i32 = 1 << 7;
+const LogLevelWarning: i32 = 1 << 8;
+const LogLevelError: i32 = 1 << 9;
+
 #[no_mangle]
 extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
     unsafe {
@@ -168,6 +175,14 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
             mono_method_desc_new(cs!(":GetEntryInternal(int,UnityEditor.LogEntry)"), 1),
             LogEntriesClass,
         );
+        let SetConsoleFlag = mono_method_desc_search_in_class(
+            mono_method_desc_new(cs!(":SetConsoleFlag(int,bool)"), 1),
+            LogEntriesClass,
+        );
+        let LogEntries_consoleFlags =
+            mono_class_get_property_from_name(LogEntriesClass, cs!("consoleFlags"));
+        let LogEntries_consoleFlags_get = mono_property_get_get_method(LogEntries_consoleFlags);
+        let LogEntries_consoleFlags_set = mono_property_get_set_method(LogEntries_consoleFlags);
 
         let EditorUserBuildSettings = mono_class_from_name(
             unity_editor,
@@ -247,6 +262,52 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         data_builder.write_string(mono_string_to_slice(current_directory as *mut _));
 
         // log info
+
+        // first, we get flags
+        let console_flags_old = *(mono_object_unbox(mono_runtime_invoke(
+            LogEntries_consoleFlags_get,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+        )) as *const i32);
+        // then, set flags
+        mono_runtime_invoke(
+            SetConsoleFlag,
+            null_mut(),
+            &mut [
+                &Collapse as *const i32 as *mut c_void,
+                &false as *const bool as *mut c_void,
+            ] as *mut _,
+            null_mut(),
+        );
+        mono_runtime_invoke(
+            SetConsoleFlag,
+            null_mut(),
+            &mut [
+                &LogLevelLog as *const i32 as *mut c_void,
+                &true as *const bool as *mut c_void,
+            ] as *mut _,
+            null_mut(),
+        );
+        mono_runtime_invoke(
+            SetConsoleFlag,
+            null_mut(),
+            &mut [
+                &LogLevelWarning as *const i32 as *mut c_void,
+                &true as *const bool as *mut c_void,
+            ] as *mut _,
+            null_mut(),
+        );
+        mono_runtime_invoke(
+            SetConsoleFlag,
+            null_mut(),
+            &mut [
+                &LogLevelError as *const i32 as *mut c_void,
+                &true as *const bool as *mut c_void,
+            ] as *mut _,
+            null_mut(),
+        );
+
         let logentry = mono_object_new(domain, LogEntryClass);
         mono_runtime_object_init(logentry);
 
@@ -286,6 +347,14 @@ extern "C" fn CONSOLE_LOG_SAVER_SAVE() {
         }
 
         mono_runtime_invoke(EndGettingEntries, null_mut(), null_mut(), null_mut());
+
+        // restore console flags
+        mono_runtime_invoke(
+            LogEntries_consoleFlags_set,
+            null_mut(),
+            &mut [&console_flags_old as *const i32 as *mut c_void] as *mut _,
+            null_mut(),
+        );
 
         // Note: RustRover would report error for this line but it's false positive
         CONSOLE_LOG_SAVER_SAVED_LOCATION = data_builder.build_to_ptr();

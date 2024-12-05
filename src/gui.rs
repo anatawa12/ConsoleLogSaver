@@ -82,7 +82,27 @@ fn main() {
                         let result = run_console_log_saver(pid, &config);
                         std::fs::write(path, result.unwrap())
                     },
-                    |_| {},
+                    move |layout, r| {
+                        let mut layout = layout.borrow_mut();
+                        match r {
+                            Ok(()) => {
+                                let msg = layout.messages.finished;
+                                layout.finish_fetch(msg);
+                            }
+                            Err(e) => {
+                                let msg =
+                                    format!("{}\n{}", layout.messages.error_getting_log_data, e);
+                                layout.finish_fetch(&msg);
+                            }
+                        }
+                    },
+                    move |layout, panic| {
+                        let mut layout = layout.borrow_mut();
+                        let message = panic_to_str(&panic);
+                        let msg =
+                            format!("{}\n{}", layout.messages.error_getting_log_data, message);
+                        layout.finish_fetch(&msg);
+                    },
                 );
             }
         });
@@ -113,8 +133,27 @@ fn main() {
                 run_other_thread(
                     layout_weak.clone(),
                     move || run_console_log_saver(pid, &config),
-                    move |r| {
-                        arboard::Clipboard::new().unwrap().set_text(r).unwrap();
+                    move |layout, r| {
+                        let mut layout = layout.borrow_mut();
+                        match r {
+                            Ok(string) => {
+                                arboard::Clipboard::new().unwrap().set_text(string).unwrap();
+                                let msg = layout.messages.finished;
+                                layout.finish_fetch(msg);
+                            }
+                            Err(e) => {
+                                let msg =
+                                    format!("{}\n{}", layout.messages.error_getting_log_data, e);
+                                layout.finish_fetch(&msg);
+                            }
+                        }
+                    },
+                    move |layout, panic| {
+                        let mut layout = layout.borrow_mut();
+                        let message = panic_to_str(&panic);
+                        let msg =
+                            format!("{}\n{}", layout.messages.error_getting_log_data, message);
+                        layout.finish_fetch(&msg);
                     },
                 );
             }
@@ -130,60 +169,47 @@ fn main() {
     ui.main();
 }
 
-fn run_other_thread<FOff, FMain, T, E>(
+fn panic_to_str<'a>(panic: &'a (dyn Any + Send + 'static)) -> &'a str {
+    if let Some(s) = panic.downcast_ref::<&str>() {
+        s
+    } else if let Some(s) = panic.downcast_ref::<String>() {
+        s
+    } else {
+        "Unknown panic"
+    }
+}
+
+fn run_other_thread<FOff, FMain, FPanic, T>(
     layout_weak: Weak<RefCell<UILayout>>,
     off_closure: FOff,
     main_closure: FMain,
+    panic_closure: FPanic,
 ) where
-    FOff: FnOnce() -> Result<T, E> + Send + UnwindSafe + 'static,
-    FMain: FnOnce(T) -> () + Send + 'static,
+    FOff: FnOnce() -> T + Send + UnwindSafe + 'static,
+    FMain: FnOnce(&RefCell<UILayout>, T) -> () + Send + 'static,
+    FPanic: FnOnce(&RefCell<UILayout>, Box<dyn Any + Send + 'static>) -> () + Send + 'static,
     T: Send + 'static,
-    E: std::fmt::Display + 'static,
 {
     let layout_weak = LayoutSender::new(layout_weak.clone());
     std::thread::spawn({
         move || {
             let unwind = catch_unwind(off_closure);
 
-            let mut data = Some((unwind, main_closure));
+            let mut data = Some((unwind, main_closure, panic_closure));
 
             unsafe {
                 queue_main_unsafe({
                     move || {
-                        let Some((unwind, main_closure)) = data.take() else {
+                        let Some((unwind, main_closure, panic_closure)) = data.take() else {
                             return;
                         };
                         let Some(layout) = layout_weak.get().upgrade() else {
                             return;
                         };
-                        let mut layout = layout.borrow_mut();
                         match unwind {
-                            Ok(Ok(result)) => {
-                                main_closure(result);
-                                let msg = layout.messages.finished;
-                                layout.finish_fetch(msg);
-                            }
-                            Ok(Err(e)) => {
-                                let msg = format!(
-                                    "{}\n{}",
-                                    layout.messages.error_getting_log_data, e
-                                );
-                                layout.finish_fetch(&msg);
-                            }
+                            Ok(result) => main_closure(&layout, result),
                             Err(panic) => {
-                                let message = if let Some(s) = panic.downcast_ref::<&str>()
-                                {
-                                    s
-                                } else if let Some(s) = panic.downcast_ref::<String>() {
-                                    s
-                                } else {
-                                    "Unknown panic"
-                                };
-                                let msg = format!(
-                                    "{}\n{}",
-                                    layout.messages.error_getting_log_data, message
-                                );
-                                layout.finish_fetch(&msg);
+                                panic_closure(&layout, panic);
                             }
                         }
                     }

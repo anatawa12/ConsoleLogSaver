@@ -65,10 +65,18 @@ jobs:
         run: |
           VERSION="$(get-version)"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          {
-            echo "$VERSION"
-            echo "# second line or later may be used for other reason later"
-          } > latest.txt
+          case "$VERSION" in
+            *-*)
+              echo "skipping updating latest.txt since this is beta release" >&2
+              ;;
+            *)
+              echo "updating latest.txt" >&2
+              {
+                echo "$VERSION"
+                echo "# second line or later may be used for other reason later"
+              } > latest.txt
+              ;;
+          esac
 
       - name: Commit & tag version
         if: ${{ inputs.publish }}

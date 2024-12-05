@@ -330,6 +330,7 @@ fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str, replacer: &ReplaceSet)
     #[derive(Deserialize)]
     struct UpmLockedDependency {
         version: Option<String>,
+        hash: Option<String>,
     }
 
     enum UpmDependencyType {
@@ -377,6 +378,16 @@ fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str, replacer: &ReplaceSet)
 
             UpmDependencyType::NpmRemote
         }
+
+        fn is_git(&self) -> bool {
+            matches!(
+                self,
+                UpmDependencyType::GitGit
+                    | UpmDependencyType::FileGit
+                    | UpmDependencyType::HttpsGit
+                    | UpmDependencyType::SshGit
+            )
+        }
     }
 
     let package_lock = std::path::Path::new(cwd).join("Packages/packages-lock.json");
@@ -389,7 +400,8 @@ fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str, replacer: &ReplaceSet)
     for (dependency, lock_info) in package_lock.dependencies {
         if let Some(version) = lock_info.version {
             let mut version = Cow::Borrowed(version.as_str());
-            match UpmDependencyType::detect_from_version(&version) {
+            let dependency_type = UpmDependencyType::detect_from_version(&version);
+            match dependency_type {
                 UpmDependencyType::NpmRemote
                 | UpmDependencyType::HttpsGit
                 | UpmDependencyType::SshGit
@@ -406,7 +418,14 @@ fn append_upm(builder: &mut ClsHeadingBuilder, cwd: &str, replacer: &ReplaceSet)
                     // relative path mostly doesn't include user home
                 }
             }
-            builder.add_header("Upm-Dependency", &format!("{dependency}@{version}"));
+            let mut version = format!("{dependency}@{version}");
+            if dependency_type.is_git() {
+                if let Some(hash) = lock_info.hash {
+                    version.push_str(":");
+                    version.push_str(&hash);
+                }
+            }
+            builder.add_header("Upm-Dependency", &version);
         }
     }
 }

@@ -1,16 +1,10 @@
 name: Build LLDB for future builds
 
 on:
-  push:
-    branches: [ master ]
   workflow_dispatch:
 
 permissions:
   contents: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 # this is for gh cli
 env:

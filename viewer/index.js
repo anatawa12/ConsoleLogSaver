@@ -231,11 +231,13 @@ function parseContent(content) {
      * @param line {number} line index
      */
     const parseHeaderValue = (s, line) => {
-        const split = s.split(':', 2);
-        if (split.length === 1) throw new Error(`invalid field at line ${line + 1}`);
-        if (split[1].startsWith(' '))
-            split[1] = split[1].substring(1);
-        return split;
+        const colon = s.indexOf(':');
+        if (colon === -1) throw new Error(`invalid field at line ${line + 1}`);
+        const name = s.substring(0, colon);
+        let value = s.substring(colon + 1);
+        if (value.startsWith(' '))
+            value = value.substring(1);
+        return [name, value];
     };
 
     const headerValues = lines.slice(0, headerFieldsEnd).map(parseHeaderValue);

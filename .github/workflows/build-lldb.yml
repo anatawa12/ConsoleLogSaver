@@ -1,0 +1,76 @@
+name: Build LLDB for future builds
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+# this is for gh cli
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          . ./build-lldb-info.sh
+          RELEASE_NAME="lldb-${LLVM_COMMIT_SHORT}-${BUILD_CONFIG_VERSION}"
+          gh release create \
+            "$RELEASE_NAME" \
+            --draft --latest=false \
+            --target "$GITHUB_REF_NAME" \
+            --title "liblldb built library with lldb ${LLVM_COMMIT_SHORT} and build config ${BUILD_CONFIG_VERSION}" \
+            --notes "This release is the place to upload prebuilt liblldb binary for console-log-saver"
+
+  build-lldb:
+    needs: [ draft-release ]
+
+    strategy:
+      matrix:
+        include:
+          - runs-on: macos-latest
+            os: macos
+          - runs-on: windows-latest
+            os: windows
+          - runs-on: ubuntu-latest
+            os: linux
+
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: imesense/gha-setup-ninja@v0.2
+      - run: ./build-lldb.sh
+        shell: bash
+      - name: Archive built binary
+        shell: bash
+        env:
+          OS: ${{ matrix.os }}
+        run: |
+          . ./build-lldb-info.sh
+
+          RELEASE_NAME="lldb-${LLVM_COMMIT_SHORT}-${BUILD_CONFIG_VERSION}"
+          TGZ_PATH="${RELEASE_NAME}-${OS}.tar.gz"
+          tar czf "$TGZ_PATH" llvm/bin llvm/lib llvm/include
+
+          gh release upload "$RELEASE_NAME" "$TGZ_PATH"
+
+  publish-release:
+    needs: [ build-lldb ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          . ./build-lldb-info.sh
+          RELEASE_NAME="lldb-${LLVM_COMMIT_SHORT}-${BUILD_CONFIG_VERSION}"
+          gh release edit "$RELEASE_NAME" --draft=false --latest=false

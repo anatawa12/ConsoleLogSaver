@@ -5,6 +5,40 @@ The tool to share Unity console log with friend who is good to error resolving.
 
 エラー解決に強い友達とUnityのコンソールログを共有するためのツール
 
+<details>
+<summary> The README for Beta release is here </summary>
+
+How to Use
+---
+
+1. Download latest zip from [here][saver-zip-download]
+2. Extract the zip file
+3. Double-click `ConsoleLogSaverGui.exe`
+4. Select your Unity Project from the list.
+5. Click `Save to File` & shere created file \
+   OR `Copy to Clipboard` and share using something like [pastebin.com]. \
+   If you can talk on discord, you can share by just pasting to the discord.
+6. (Who can solve error) Read the log file using [web viewer tool][viewer].
+
+使い方
+---
+
+[こちらのAzukimochiさんによるnote記事][note-by-azukimochi]も参考にしてください
+
+[note-by-azukimochi]: https://note.com/azukimochi25/n/n042c495e55f4
+
+1. 最新版のzipを[ここ][saver-zip-download]からダウンロードする
+2. zipファイルを展開する
+3. `ConsoleLogSaverGui.exe`をダブルクリックする
+4. Unity Projectをリストから選択する
+5. `Save to File`を押して生成されたファイルを共有する\
+   または`Copy to Clipboard`して[pastebin.com]などで共有する。\
+   discordを使える場合には、discordにペーストするだけで共有できます。
+6. (エラーを解決できる人が) [web viewer tool][viewer] を使用して出力を読む。
+
+
+</details>
+
 How to Use
 ---
 

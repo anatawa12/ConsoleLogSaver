@@ -12,31 +12,71 @@ concurrency:
   group: publish
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            setup: sudo apt install libgtk-3-dev
+          - runs-on: macos-latest
+            additional-target: x86_64-apple-darwin
+          - runs-on: windows-latest
+    runs-on: ${{ matrix.runs-on }}
+
+    permissions:
+      contents: read
+
+    # TODO: code sign on macOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.additional-target }}
+      - name: Install Setup Scripts
+        run: ${{ matrix.setup }}
+
+      - run: ./download-prebuilt-lldb.sh
+      - run: ./build.sh --release
+      - run: ./build.sh --release --target ${{ matrix.additional-target }}
+        if: ${{ matrix.additional-target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.runs-on }}
+          path: target/*/*/ConsoleLogSaver*
+
   create-release:
+    needs: [ build ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup .NET Core SDK 8.0.x
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - uses: anatawa12/something-releaser@v2
+      - uses: anatawa12/something-releaser@v3
       - uses: snow-actions/git-config-user@v1.0.0
 
       - name: Update Version Name
         id: update-version
         run: |
           VERSION="$(get-version)"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          {
-            echo "$VERSION"
-            echo "# second line or later may be used for other reason later"
-          } > latest.txt
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          case "$VERSION" in
+            *-*)
+              echo "skipping updating latest.txt since this is beta release" >&2
+              ;;
+            *)
+              echo "updating latest.txt" >&2
+              {
+                echo "$VERSION"
+                echo "# second line or later may be used for other reason later"
+              } > latest.txt
+              ;;
+          esac
 
       - name: Commit & tag version
         if: ${{ inputs.publish }}
@@ -44,9 +84,28 @@ jobs:
           git commit -am "$VERSION"
           git tag "v$VERSION"
 
-      - run: ./build.sh
+      - name: Download built binary
+        uses: actions/download-artifact@v4
+        with:
+          path: target
+          pattern: binary-*
+          merge-multiple: true
+
+      - name: move to bin dir
+        run: |
+          mkdir bin
+          mvcmd() {
+            mv "target/$1/release/ConsoleLogSaverCli$3" "bin/ConsoleLogSaver.Cli-$2$3" || :
+            mv "target/$1/release/ConsoleLogSaverGui$3" "bin/ConsoleLogSaver.Gui-$2$3" || :
+          }
+          mvcmd x86_64-apple-darwin       osx-x64     ""
+          mvcmd aarch64-apple-darwin      osx-arm64   ""
+          mvcmd x86_64-unknown-linux-gnu  linux-x64   ""
+          mvcmd x86_64-pc-windows-msvc    win-x64     ".exe"
+          mvcmd x86_64-pc-windows-msvc    win-x64     ".pdb"
+
       - name: Upload bin
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: bin
 

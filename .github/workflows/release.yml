@@ -81,7 +81,7 @@ jobs:
       - name: Commit & tag version
         if: ${{ inputs.publish }}
         run: |
-          git commit -am "$VERSION"
+          git commit -am "$VERSION" || true
           git tag "v$VERSION"
 
       - name: Download built binary

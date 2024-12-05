@@ -45,69 +45,6 @@ fn main() {
             }
         });
 
-        fn run_other_thread<FOff, FMain, T, E>(
-            layout_weak: Weak<RefCell<UILayout>>,
-            off_closure: FOff,
-            main_closure: FMain,
-        ) where
-            FOff: FnOnce() -> Result<T, E> + Send + UnwindSafe + 'static,
-            FMain: FnOnce(T) -> () + Send + 'static,
-            T: Send + 'static,
-            E: std::fmt::Display + 'static,
-        {
-            let layout_weak = LayoutSender::new(layout_weak.clone());
-            std::thread::spawn({
-                move || {
-                    let unwind = catch_unwind(off_closure);
-
-                    let mut data = Some((unwind, main_closure));
-
-                    unsafe {
-                        queue_main_unsafe({
-                            move || {
-                                let Some((unwind, main_closure)) = data.take() else {
-                                    return;
-                                };
-                                let Some(layout) = layout_weak.get().upgrade() else {
-                                    return;
-                                };
-                                let mut layout = layout.borrow_mut();
-                                match unwind {
-                                    Ok(Ok(result)) => {
-                                        main_closure(result);
-                                        let msg = layout.messages.finished;
-                                        layout.finish_fetch(msg);
-                                    }
-                                    Ok(Err(e)) => {
-                                        let msg = format!(
-                                            "{}\n{}",
-                                            layout.messages.error_getting_log_data, e
-                                        );
-                                        layout.finish_fetch(&msg);
-                                    }
-                                    Err(panic) => {
-                                        let message = if let Some(s) = panic.downcast_ref::<&str>()
-                                        {
-                                            s
-                                        } else if let Some(s) = panic.downcast_ref::<String>() {
-                                            s
-                                        } else {
-                                            "Unknown panic"
-                                        };
-                                        let msg = format!(
-                                            "{}\n{}",
-                                            layout.messages.error_getting_log_data, message
-                                        );
-                                        layout.finish_fetch(&msg);
-                                    }
-                                }
-                            }
-                        })
-                    }
-                }
-            });
-        }
-
         layout.save_to_file.on_clicked({
             let data = data.clone();
             let layout_weak = Rc::downgrade(layout_rc);
@@ -191,6 +128,69 @@ fn main() {
     win.show();
     // Run the application
     ui.main();
+}
+
+fn run_other_thread<FOff, FMain, T, E>(
+    layout_weak: Weak<RefCell<UILayout>>,
+    off_closure: FOff,
+    main_closure: FMain,
+) where
+    FOff: FnOnce() -> Result<T, E> + Send + UnwindSafe + 'static,
+    FMain: FnOnce(T) -> () + Send + 'static,
+    T: Send + 'static,
+    E: std::fmt::Display + 'static,
+{
+    let layout_weak = LayoutSender::new(layout_weak.clone());
+    std::thread::spawn({
+        move || {
+            let unwind = catch_unwind(off_closure);
+
+            let mut data = Some((unwind, main_closure));
+
+            unsafe {
+                queue_main_unsafe({
+                    move || {
+                        let Some((unwind, main_closure)) = data.take() else {
+                            return;
+                        };
+                        let Some(layout) = layout_weak.get().upgrade() else {
+                            return;
+                        };
+                        let mut layout = layout.borrow_mut();
+                        match unwind {
+                            Ok(Ok(result)) => {
+                                main_closure(result);
+                                let msg = layout.messages.finished;
+                                layout.finish_fetch(msg);
+                            }
+                            Ok(Err(e)) => {
+                                let msg = format!(
+                                    "{}\n{}",
+                                    layout.messages.error_getting_log_data, e
+                                );
+                                layout.finish_fetch(&msg);
+                            }
+                            Err(panic) => {
+                                let message = if let Some(s) = panic.downcast_ref::<&str>()
+                                {
+                                    s
+                                } else if let Some(s) = panic.downcast_ref::<String>() {
+                                    s
+                                } else {
+                                    "Unknown panic"
+                                };
+                                let msg = format!(
+                                    "{}\n{}",
+                                    layout.messages.error_getting_log_data, message
+                                );
+                                layout.finish_fetch(&msg);
+                            }
+                        }
+                    }
+                })
+            }
+        }
+    });
 }
 
 struct UnityProcessList {

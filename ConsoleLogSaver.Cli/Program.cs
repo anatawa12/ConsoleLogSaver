@@ -126,7 +126,7 @@ void PrintHelp(int exitCode)
     Console.Error.WriteLine("\t--show-aws-upload-signature: disable Hide AWS Upload Signature flag");
     Console.Error.WriteLine("\t--pid <pid>: specify pid of unity");
     Console.Error.WriteLine("\t--port <port>: specify debugger port of unity");
-    Console.Error.WriteLine("\t----stacktraces: print stacktrace instead of logs");
+    Console.Error.WriteLine("\t--stacktraces: print stacktrace instead of logs");
     Console.Error.WriteLine("\t--list: list unity processes and exit");
     Console.Error.WriteLine("\t--help: show this message and exit");
     Environment.Exit(exitCode);

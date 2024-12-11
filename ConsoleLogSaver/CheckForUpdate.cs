@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 
 namespace Anatawa12.ConsoleLogSaver;
 
@@ -12,7 +13,9 @@ public class CheckForUpdate
             if (_currentVersion != null) return _currentVersion;
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             Debug.Assert(version != null, nameof(version) + " != null");
-            return _currentVersion = $"{version.Major}.{version.Minor}.{version.Build}-StacktraceSaver";
+            var version2 = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
+            var commit = version2.Contains('+') ? version2.Split('+')[1][..8] : "unknown";
+            return _currentVersion = $"{version.Major}.{version.Minor}.{version.Build}-StacktraceSaver+{commit}";;
         }
     }
 

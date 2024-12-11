@@ -175,10 +175,20 @@ public class DebuggerSession : IDisposable
         
         if (_vm == null) throw new IOException($"Cannot connect to process");
 
-        using var scope = await WaitAndRunInMainThread(cancellationToken);
-        var thread = scope.Thread;
-
-        _projectRoot = new DirectoryWrapper(thread).GetCurrentDirectory();
+        VirtualMachine.Suspend();
+        foreach (var threadMirror in VirtualMachine.GetThreads())
+        {
+            try
+            {
+                _projectRoot = new DirectoryWrapper(threadMirror).GetCurrentDirectory();
+                return;
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+        throw new IOException("Cannot get project root");
     }
 
     public async Task<InThreadScope> WaitAndRunInMainThread(CancellationToken cancellationToken = default) =>

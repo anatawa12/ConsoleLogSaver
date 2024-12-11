@@ -105,6 +105,7 @@ sealed class MainWindow : Form
         {
             AddButton(Localization.SaveToFile, SaveToFile, false),
             AddButton(Localization.CopyToClipboard, CopyToClipboard, false),
+            AddButton("Save Stacktrace", SaveStackTrace, false),
         };
 
         ReloadUnity();
@@ -221,6 +222,20 @@ sealed class MainWindow : Form
         }
     }
 
+    private async Task<string?> CollectStackTrace()
+    {
+        try
+        {
+            var item = (UnitySessionItem)UnityInstances.SelectedItems[0];
+            return await _saver.CollectStackTrace(item.Session);
+        }
+        catch (VMDisconnectedException)
+        {
+            MessageBox.Show("The Unity Process exited.", "ERROR");
+            return null;
+        }
+    }
+
     private async void SaveToFile(object? sender, EventArgs e)
     {
         var openFile = new SaveFileDialog
@@ -246,6 +261,24 @@ sealed class MainWindow : Form
         if (collect == null) return;
         Clipboard.SetText(LogFileWriter.WriteToString(collect));
         MessageBox.Show("Copied", "Copied!");
+    }
+
+    private async void SaveStackTrace(object? sender, EventArgs e)
+    {
+        var openFile = new SaveFileDialog
+        {
+            Title = "Save Stacktrace To File",
+            FileName = "stacktrace.txt",
+            Filter = "Text files (*.txt)|*.txt",
+        };
+
+        if (openFile.ShowDialog() == DialogResult.OK)
+        {
+            var collect = await CollectStackTrace();
+            if (collect == null) return;
+            await using var writer = new StreamWriter(openFile.OpenFile());
+            await writer.WriteAsync(collect);
+        }
     }
 
     class UnitySessionItem : ListViewItem

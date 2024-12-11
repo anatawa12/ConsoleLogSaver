@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using Mono.Debugger.Soft;
 
@@ -78,6 +79,29 @@ public partial class ConsoleLogSaver
         AppendLog(thread, fileBuilder);
 
         return fileBuilder.Build();
+    }
+
+    public async Task<String> CollectStackTrace(DebuggerSession session)
+    {
+        var vm = session.VirtualMachine;
+
+        // first, we suspend VM to get stack trace
+        vm.Suspend();
+
+        var builder = new StringBuilder();
+        ThreadMirror.NativeTransitions = true;
+
+        foreach (var threadMirror in vm.GetThreads())
+        {
+            builder.Append($"Thread '{threadMirror.Name}' (system tid: {threadMirror.TID}, managed tid: {threadMirror.ThreadId}):\n");
+
+
+            foreach (var stackFrame in threadMirror.GetFrames())
+                builder.Append($"  {stackFrame.Location}\n");
+            builder.Append("\n");
+        }
+
+        return builder.ToString();
     }
 
     private void AppendLog(ThreadMirror thread, ConsoleLogFileV1.Builder fileBuilder)

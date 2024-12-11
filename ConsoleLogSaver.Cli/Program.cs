@@ -3,6 +3,7 @@
 int? pidIn = null;
 int? portIn = null;
 var saver = new ConsoleLogSaver();
+var collectStackTrace = false;
 
 for (var i = 0; i < args.Length; i++)
 {
@@ -45,6 +46,9 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--port":
             portIn = int.Parse(args[++i]);
+            break;
+        case "--stacktraces":
+            collectStackTrace = true;
             break;
         default:
             pidIn = int.Parse(s);
@@ -94,7 +98,14 @@ else
 }
 using DebuggerSession session = sessionInit;
 
-Console.WriteLine(LogFileWriter.WriteToString(await saver.Collect(session)));
+if (collectStackTrace)
+{
+    Console.WriteLine(await saver.CollectStackTrace(session));
+}
+else
+{
+    Console.WriteLine(LogFileWriter.WriteToString(await saver.Collect(session)));
+}
 
 void PrintHelp(int exitCode)
 {
@@ -115,6 +126,7 @@ void PrintHelp(int exitCode)
     Console.Error.WriteLine("\t--show-aws-upload-signature: disable Hide AWS Upload Signature flag");
     Console.Error.WriteLine("\t--pid <pid>: specify pid of unity");
     Console.Error.WriteLine("\t--port <port>: specify debugger port of unity");
+    Console.Error.WriteLine("\t----stacktraces: print stacktrace instead of logs");
     Console.Error.WriteLine("\t--list: list unity processes and exit");
     Console.Error.WriteLine("\t--help: show this message and exit");
     Environment.Exit(exitCode);

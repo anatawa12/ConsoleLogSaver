@@ -370,7 +370,6 @@ dependencies = [
  "byteorder",
  "home",
  "libui",
- "libui-ffi",
  "lldb",
  "open",
  "regex",
@@ -907,7 +906,7 @@ dependencies = [
 [[package]]
 name = "libui"
 version = "0.3.0"
-source = "git+https://github.com/libui-rs/libui?rev=07155974#071559746ef04d154468025c0bb8e6d25fcbf2a0"
+source = "git+https://github.com/libui-rs/libui?rev=2e5625fe#2e5625fea9f4b26fea6bc327b94284623227033b"
 dependencies = [
  "bitflags 1.3.2",
  "libc",
@@ -917,7 +916,7 @@ dependencies = [
 [[package]]
 name = "libui-ffi"
 version = "0.3.0"
-source = "git+https://github.com/libui-rs/libui?rev=07155974#071559746ef04d154468025c0bb8e6d25fcbf2a0"
+source = "git+https://github.com/libui-rs/libui?rev=2e5625fe#2e5625fea9f4b26fea6bc327b94284623227033b"
 dependencies = [
  "bindgen",
  "cc",

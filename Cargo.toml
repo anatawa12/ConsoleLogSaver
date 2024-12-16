@@ -18,8 +18,7 @@ whoami = { version = "1.5.2", default-features = false }
 home = "0.5.9"
 rfd = { version = "0.15.1", optional = true }
 sys-locale = { version = "0.3.2", optional = true }
-libui = { git = "https://github.com/libui-rs/libui", version = "0.3.0", rev = '07155974', optional = true }
-libui-ffi = { git = "https://github.com/libui-rs/libui", version = "0.3.0", rev = '07155974', optional = true }
+libui = { git = "https://github.com/libui-rs/libui", version = "0.3.0", rev = '2e5625fe', optional = true }
 arboard = { version = "3.4.1", default-features = false, optional = true }
 ureq = { version = "2.12.1", default-features = false, features = ["native-certs", "tls"] }
 open = "5.3.1"
@@ -35,7 +34,7 @@ required-features = ['gui']
 
 [features]
 external_debug_server = []
-gui = [ "dep:rfd", "dep:sys-locale", "dep:libui", "dep:libui-ffi", "arboard" ]
+gui = [ "dep:rfd", "dep:sys-locale", "dep:libui", "arboard" ]
 
 [workspace]
 members = [

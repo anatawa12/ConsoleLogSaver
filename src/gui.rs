@@ -8,9 +8,10 @@ use libui::controls::{
 use libui::prelude::*;
 use std::any::Any;
 use std::cell::RefCell;
-use std::os::raw::c_void;
-use std::panic::{catch_unwind, UnwindSafe};
-use std::rc::{Rc, Weak};
+use std::ops::Deref;
+use std::panic::catch_unwind;
+use std::rc::Rc;
+use std::thread;
 
 fn main() {
     let ui = UI::init().expect("Couldn't initialize UI library");
@@ -38,26 +39,27 @@ fn main() {
             open::that("https://github.com/anatawa12/ConsoleLogSaver#readme").ok();
         });
 
-        run_other_thread(
-            Rc::downgrade(layout_rc),
-            || check_for_update(),
-            |layout, option| {
-                let mut layout = layout.borrow_mut();
-                if let Some((outdated, latest)) = option {
-                    if outdated {
-                        layout.this_is_outdated(&latest);
-                    } else {
-                        layout.this_is_latest()
+        std::thread::spawn({
+            let queue = libui::EventQueueWithData::new(&ui, Rc::downgrade(layout_rc));
+            move || {
+                let unwind = catch_unwind(|| check_for_update());
+
+                queue.queue_main(move |layout| {
+                    let Some(layout) = layout.upgrade() else {
+                        return;
+                    };
+                    let mut layout = layout.borrow_mut();
+
+                    match unwind {
+                        Ok(Some((true, latest))) => {
+                            layout.this_is_outdated(&latest);
+                        }
+                        Ok(Some((false, _))) => layout.this_is_latest(),
+                        Ok(None) | Err(_) => layout.failed_to_get_latest(),
                     }
-                } else {
-                    layout.failed_to_get_latest()
-                }
-            },
-            |layout, _| {
-                let mut layout = layout.borrow_mut();
-                layout.failed_to_get_latest()
-            },
-        );
+                });
+            }
+        });
 
         layout.set_messages(Messages::get_by_locale(SupportedLocale::default()));
 
@@ -73,6 +75,7 @@ fn main() {
         layout.save_to_file.on_clicked({
             let data = data.clone();
             let layout_weak = Rc::downgrade(layout_rc);
+            let ui = ui.clone();
             move |_| {
                 let Some(layout) = layout_weak.upgrade() else {
                     return;
@@ -101,39 +104,50 @@ fn main() {
                 let config = create_config(&layout);
 
                 layout.start_fetch();
-                run_other_thread(
-                    layout_weak.clone(),
+                let queue = libui::EventQueueWithData::new(&ui, layout_weak.clone());
+                thread::spawn({
                     move || {
-                        let result = run_console_log_saver(pid, &config);
-                        std::fs::write(path, result.unwrap())
-                    },
-                    move |layout, r| {
-                        let mut layout = layout.borrow_mut();
-                        match r {
-                            Ok(()) => {
-                                let msg = layout.messages.finished;
-                                layout.finish_fetch(msg);
+                        let unwind = catch_unwind(|| {
+                            let result = run_console_log_saver(pid, &config);
+                            std::fs::write(path, result.unwrap())
+                        });
+
+                        queue.queue_main(|layout| {
+                            let Some(layout) = layout.upgrade() else {
+                                return;
+                            };
+                            let mut layout = layout.borrow_mut();
+
+                            match unwind {
+                                Ok(Ok(())) => {
+                                    let msg = layout.messages.finished;
+                                    layout.finish_fetch(msg);
+                                }
+                                Ok(Err(e)) => {
+                                    let msg = format!(
+                                        "{}\n{}",
+                                        layout.messages.error_getting_log_data, e
+                                    );
+                                    layout.finish_fetch(&msg);
+                                }
+                                Err(panic) => {
+                                    let message = panic_to_str(panic.deref());
+                                    let msg = format!(
+                                        "{}\n{}",
+                                        layout.messages.error_getting_log_data, message
+                                    );
+                                    layout.finish_fetch(&msg);
+                                }
                             }
-                            Err(e) => {
-                                let msg =
-                                    format!("{}\n{}", layout.messages.error_getting_log_data, e);
-                                layout.finish_fetch(&msg);
-                            }
-                        }
-                    },
-                    move |layout, panic| {
-                        let mut layout = layout.borrow_mut();
-                        let message = panic_to_str(&panic);
-                        let msg =
-                            format!("{}\n{}", layout.messages.error_getting_log_data, message);
-                        layout.finish_fetch(&msg);
-                    },
-                );
+                        })
+                    }
+                });
             }
         });
         layout.copy_to_clipboard.on_clicked({
             let data = data.clone();
             let layout_weak = Rc::downgrade(layout_rc);
+            let ui = ui.clone();
             move |_| {
                 let Some(layout) = layout_weak.upgrade() else {
                     return;
@@ -154,33 +168,42 @@ fn main() {
                 let config = create_config(&layout);
 
                 layout.start_fetch();
+                thread::spawn({
+                    let queue = libui::EventQueueWithData::new(&ui, layout_weak.clone());
+                    move || {
+                        let unwind = catch_unwind(|| run_console_log_saver(pid, &config));
 
-                run_other_thread(
-                    layout_weak.clone(),
-                    move || run_console_log_saver(pid, &config),
-                    move |layout, r| {
-                        let mut layout = layout.borrow_mut();
-                        match r {
-                            Ok(string) => {
-                                arboard::Clipboard::new().unwrap().set_text(string).unwrap();
-                                let msg = layout.messages.finished;
-                                layout.finish_fetch(msg);
+                        queue.queue_main(|layout| {
+                            let Some(layout) = layout.upgrade() else {
+                                return;
+                            };
+                            let mut layout = layout.borrow_mut();
+
+                            match unwind {
+                                Ok(Ok(string)) => {
+                                    arboard::Clipboard::new().unwrap().set_text(string).unwrap();
+                                    let msg = layout.messages.finished;
+                                    layout.finish_fetch(msg);
+                                }
+                                Ok(Err(e)) => {
+                                    let msg = format!(
+                                        "{}\n{}",
+                                        layout.messages.error_getting_log_data, e
+                                    );
+                                    layout.finish_fetch(&msg);
+                                }
+                                Err(panic) => {
+                                    let message = panic_to_str(panic.deref());
+                                    let msg = format!(
+                                        "{}\n{}",
+                                        layout.messages.error_getting_log_data, message
+                                    );
+                                    layout.finish_fetch(&msg);
+                                }
                             }
-                            Err(e) => {
-                                let msg =
-                                    format!("{}\n{}", layout.messages.error_getting_log_data, e);
-                                layout.finish_fetch(&msg);
-                            }
-                        }
-                    },
-                    move |layout, panic| {
-                        let mut layout = layout.borrow_mut();
-                        let message = panic_to_str(&panic);
-                        let msg =
-                            format!("{}\n{}", layout.messages.error_getting_log_data, message);
-                        layout.finish_fetch(&msg);
-                    },
-                );
+                        })
+                    }
+                });
             }
         });
     }
@@ -202,46 +225,6 @@ fn panic_to_str<'a>(panic: &'a (dyn Any + Send + 'static)) -> &'a str {
     } else {
         "Unknown panic"
     }
-}
-
-fn run_other_thread<FOff, FMain, FPanic, T>(
-    layout_weak: Weak<RefCell<UILayout>>,
-    off_closure: FOff,
-    main_closure: FMain,
-    panic_closure: FPanic,
-) where
-    FOff: FnOnce() -> T + Send + UnwindSafe + 'static,
-    FMain: FnOnce(&RefCell<UILayout>, T) -> () + Send + 'static,
-    FPanic: FnOnce(&RefCell<UILayout>, Box<dyn Any + Send + 'static>) -> () + Send + 'static,
-    T: Send + 'static,
-{
-    let layout_weak = LayoutSender::new(layout_weak.clone());
-    std::thread::spawn({
-        move || {
-            let unwind = catch_unwind(off_closure);
-
-            let mut data = Some((unwind, main_closure, panic_closure));
-
-            unsafe {
-                queue_main_unsafe({
-                    move || {
-                        let Some((unwind, main_closure, panic_closure)) = data.take() else {
-                            return;
-                        };
-                        let Some(layout) = layout_weak.get().upgrade() else {
-                            return;
-                        };
-                        match unwind {
-                            Ok(result) => main_closure(&layout, result),
-                            Err(panic) => {
-                                panic_closure(&layout, panic);
-                            }
-                        }
-                    }
-                })
-            }
-        }
-    });
 }
 
 struct UnityProcessList {
@@ -328,43 +311,6 @@ impl TableDataSource for UnityProcessList {
 
     fn set_cell(&mut self, _: i32, _: i32, _: TableValue) {
         // unsupported
-    }
-}
-
-struct LayoutSender(*const RefCell<UILayout>);
-unsafe impl Send for LayoutSender {}
-unsafe impl Sync for LayoutSender {}
-
-impl LayoutSender {
-    fn new(layout: Weak<RefCell<UILayout>>) -> LayoutSender {
-        LayoutSender(layout.into_raw())
-    }
-
-    unsafe fn get(&self) -> Weak<RefCell<UILayout>> {
-        Weak::from_raw(self.0)
-    }
-}
-
-pub unsafe fn queue_main_unsafe<F: FnMut() + 'static>(callback: F) {
-    /// Transmutes a raw mutable pointer into a mutable reference.
-    pub unsafe fn from_void_ptr<'ptr, F>(ptr: *mut c_void) -> &'ptr mut F {
-        unsafe { std::mem::transmute(ptr) }
-    }
-
-    /// Places any value on the heap, producing a heap pointer to it.
-    /// Can leak memory if the pointer is never freed.
-    pub fn to_heap_ptr<F>(item: F) -> *mut c_void {
-        Box::into_raw(Box::new(item)) as *mut c_void
-    }
-
-    extern "C" fn c_callback<G: FnMut()>(data: *mut c_void) {
-        unsafe {
-            from_void_ptr::<G>(data)();
-        }
-    }
-
-    unsafe {
-        libui_ffi::uiQueueMain(Some(c_callback::<F>), to_heap_ptr(callback));
     }
 }
 

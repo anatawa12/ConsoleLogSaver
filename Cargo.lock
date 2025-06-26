@@ -905,8 +905,8 @@ dependencies = [
 
 [[package]]
 name = "libui"
-version = "0.3.0"
-source = "git+https://github.com/libui-rs/libui?rev=2e5625fe#2e5625fea9f4b26fea6bc327b94284623227033b"
+version = "0.4.0"
+source = "git+https://github.com/libui-rs/libui?rev=4bdb78d#4bdb78dd4072f36d2d06048b015cf85b56d6d86b"
 dependencies = [
  "bitflags 1.3.2",
  "libc",
@@ -915,8 +915,8 @@ dependencies = [
 
 [[package]]
 name = "libui-ffi"
-version = "0.3.0"
-source = "git+https://github.com/libui-rs/libui?rev=2e5625fe#2e5625fea9f4b26fea6bc327b94284623227033b"
+version = "0.4.0"
+source = "git+https://github.com/libui-rs/libui?rev=4bdb78d#4bdb78dd4072f36d2d06048b015cf85b56d6d86b"
 dependencies = [
  "bindgen",
  "cc",

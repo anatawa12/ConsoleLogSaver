@@ -1,6 +1,5 @@
 #![windows_subsystem = "windows"]
 
-use console_log_saver::*;
 use libui::controls::{
     Button, Checkbox, Combobox, Group, Label, ProgressBar, ProgressBarValue, SelectionMode, Table,
     TableDataSource, TableModel, TableParameters, TableValue, TableValueType, VerticalBox,
@@ -12,6 +11,8 @@ use std::ops::Deref;
 use std::panic::catch_unwind;
 use std::rc::Rc;
 use std::thread;
+
+static CURRENT_VERSION: &str = "libui-report";
 
 fn main() {
     let ui = UI::init().expect("Couldn't initialize UI library");
@@ -42,7 +43,7 @@ fn main() {
         std::thread::spawn({
             let queue = libui::EventQueueWithData::new(&ui, Rc::downgrade(layout_rc));
             move || {
-                let unwind = catch_unwind(|| check_for_update());
+                let unwind = catch_unwind(|| Some((false, "")));
 
                 queue.queue_main(move |layout| {
                     let Some(layout) = layout.upgrade() else {
@@ -72,6 +73,7 @@ fn main() {
             }
         });
 
+        /*
         layout.save_to_file.on_clicked({
             let data = data.clone();
             let layout_weak = Rc::downgrade(layout_rc);
@@ -144,6 +146,7 @@ fn main() {
                 });
             }
         });
+        // */
         layout.copy_to_clipboard.on_clicked({
             let data = data.clone();
             let layout_weak = Rc::downgrade(layout_rc);
@@ -153,6 +156,7 @@ fn main() {
                     return;
                 };
                 let mut layout = layout.borrow_mut();
+                /*
                 let Some(&selecting) = layout.table.selection().get(0) else {
                     return;
                 };
@@ -166,12 +170,16 @@ fn main() {
                 };
 
                 let config = create_config(&layout);
+                // */
 
                 layout.start_fetch();
                 thread::spawn({
                     let queue = libui::EventQueueWithData::new(&ui, layout_weak.clone());
                     move || {
-                        let unwind = catch_unwind(|| run_console_log_saver(pid, &config));
+                        let unwind = catch_unwind(|| { 
+                          std::thread::sleep(std::time::Duration::from_secs(3));
+                            std::io::Result::Ok(String::from("test"))
+                        });
 
                         queue.queue_main(|layout| {
                             let Some(layout) = layout.upgrade() else {
@@ -228,7 +236,7 @@ fn panic_to_str<'a>(panic: &'a (dyn Any + Send + 'static)) -> &'a str {
 }
 
 struct UnityProcessList {
-    unity_process: Vec<UnityProcess>,
+    unity_process: Vec<()>,
 }
 
 impl UnityProcessList {
@@ -239,6 +247,7 @@ impl UnityProcessList {
     }
 
     fn reload_unity(&mut self, model: &mut TableModel) {
+        /*
         let prev_data = std::mem::replace(&mut self.unity_process, find_unity_processes());
         self.unity_process = find_unity_processes();
 
@@ -276,6 +285,7 @@ impl UnityProcessList {
         }
 
         println!("unity process found: {:?}", &self.unity_process);
+        // */
     }
 }
 
@@ -285,7 +295,7 @@ impl TableDataSource for UnityProcessList {
     }
 
     fn num_rows(&mut self) -> i32 {
-        self.unity_process.len().try_into().unwrap_or(i32::MAX)
+        0
     }
 
     fn column_type(&mut self, column: i32) -> TableValueType {
@@ -297,16 +307,7 @@ impl TableDataSource for UnityProcessList {
     }
 
     fn cell(&mut self, column: i32, row: i32) -> TableValue {
-        let row = &self.unity_process[row as usize];
-        match column {
-            0 => TableValue::String(row.pid().to_string()),
-            1 => TableValue::String(format!(
-                "{} ({})",
-                row.project_path().file_name().unwrap().to_string_lossy(),
-                row.project_path().to_string_lossy()
-            )),
-            _ => unreachable!(),
-        }
+        unreachable!()
     }
 
     fn set_cell(&mut self, _: i32, _: i32, _: TableValue) {
@@ -314,6 +315,7 @@ impl TableDataSource for UnityProcessList {
     }
 }
 
+/*
 fn create_config(layout: &UILayout) -> ConsoleLogSaverConfig {
     let mut config = ConsoleLogSaverConfig::default();
     config.hide_os_info = layout.hide_os_info.checked();
@@ -322,6 +324,7 @@ fn create_config(layout: &UILayout) -> ConsoleLogSaverConfig {
     config.hide_aws_upload_signature = layout.hide_aws_upload_signature.checked();
     config
 }
+// */
 
 enum VersionInfo {
     Fetching,
@@ -475,21 +478,20 @@ impl UILayout {
                 }
             });
 
-            layout.save_to_file.disable();
-            layout.copy_to_clipboard.disable();
+            //layout.save_to_file.disable();
+            //layout.copy_to_clipboard.disable();
 
             // set default values
-            let default_config = ConsoleLogSaverConfig::default();
-            layout.hide_os_info.set_checked(default_config.hide_os_info);
+            layout.hide_os_info.set_checked(false);
             layout
                 .hide_user_name
-                .set_checked(default_config.hide_user_name);
+                .set_checked(true);
             layout
                 .hide_user_home_path
-                .set_checked(default_config.hide_user_home);
+                .set_checked(true);
             layout
                 .hide_aws_upload_signature
-                .set_checked(default_config.hide_aws_upload_signature);
+                .set_checked(true);
 
             layout.set_messages(Messages::en());
         }

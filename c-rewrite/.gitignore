@@ -1,0 +1,4 @@
+/build*
+/subprojects/*
+!/subprojects/packagefiles/
+!/subprojects/libui.wrap

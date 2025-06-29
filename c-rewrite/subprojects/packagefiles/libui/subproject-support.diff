@@ -1,0 +1,64 @@
+diff --git a/meson.build b/meson.build
+index 8789fbe4..911e2d1e 100644
+--- a/meson.build
++++ b/meson.build
+@@ -4,7 +4,7 @@
+ 
+ # TODO remove cpp from this list once https://github.com/mesonbuild/meson/issues/5181 is settled; move it to the OS checks and under cpp-multithread
+ project('libui', ['c', 'cpp'],
+-	meson_version: '>=0.58.0',
++	meson_version: '>=0.63.0',
+ 	default_options: [
+ 		'buildtype=debug',				# build debug by default
+ 		'default_library=shared',			# build shared libraries by default
+@@ -70,12 +70,12 @@ if libui_OS == 'darwin'
+ 	libui_darwin_langs = ['c', 'objc']
+ 
+ 	libui_macosx_version_min = '-mmacosx-version-min=10.8'
+-	add_global_arguments(libui_macosx_version_min, language: libui_darwin_langs)
+-	add_global_link_arguments(libui_macosx_version_min, language: libui_darwin_langs)
++	add_project_arguments(libui_macosx_version_min, language: libui_darwin_langs)
++	add_project_link_arguments(libui_macosx_version_min, language: libui_darwin_langs)
+ 
+ 	libui_arch = ['-arch', 'x86_64', '-arch', 'arm64']
+-	add_global_arguments(libui_arch, language: libui_darwin_langs)
+-	add_global_link_arguments(libui_arch, language: libui_darwin_langs)
++	add_project_arguments(libui_arch, language: libui_darwin_langs)
++	add_project_link_arguments(libui_arch, language: libui_darwin_langs)
+ endif
+ 
+ if libui_MSVC
+diff --git a/subprojects/cmocka.wrap b/subprojects/cmocka.wrap
+index 4fdf1dbd..9b600374 100644
+--- a/subprojects/cmocka.wrap
++++ b/subprojects/cmocka.wrap
+@@ -7,6 +7,7 @@ patch_filename = cmocka_1.1.5-4_patch.zip
+ patch_url = https://wrapdb.mesonbuild.com/v2/cmocka_1.1.5-4/get_patch
+ patch_hash = 2e1372ca612ae384ba84e95ad2bde14411afb825bddc199747adb022618414a6
+ wrapdb_version = 1.1.5-4
++diff_files = cmocka/darwin-min-version-and-fat-binary.diff
+ 
+ [provide]
+ cmocka = cmocka_dep
+diff --git a/subprojects/packagefiles/cmocka/darwin-min-version-and-fat-binary.diff b/subprojects/packagefiles/cmocka/darwin-min-version-and-fat-binary.diff
+new file mode 100644
+index 00000000..f44ecb46
+--- /dev/null
++++ b/subprojects/packagefiles/cmocka/darwin-min-version-and-fat-binary.diff
+@@ -0,0 +1,16 @@
++diff -ruN cmocka-1.1.5/meson.build cmocka-1.1.5-fix/meson.build
++--- cmocka-1.1.5/meson.build	2022-11-14 22:29:23.000000000 -0500
+++++ cmocka-1.1.5-fix/meson.build	2022-11-14 21:52:10.000000000 -0500
++@@ -85,6 +85,12 @@
++     )
++     # We can't test the build type, so we can' add -D_FORTIFY_SOURCE=2 here
++     if machine.system() == 'darwin'
+++      macosx_version_min = '-mmacosx-version-min=10.8'
+++      add_project_arguments(macosx_version_min, language: ['c'])
+++      add_project_link_arguments(macosx_version_min, language: ['c'])
+++      arch = ['-arch', 'x86_64', '-arch', 'arm64']
+++      add_project_arguments(arch, language: ['c'])
+++      add_project_link_arguments(arch, language: ['c'])
++       if compiler.has_argument('-Wno-deprecated-declarations')
++         add_project_arguments('-Wno-deprecated-declarations', language : ['c'], native: is_native)
++       endif

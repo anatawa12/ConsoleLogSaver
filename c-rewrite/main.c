@@ -15,6 +15,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #define SLEEP(ms) sleep(ms/1000)
 #endif
 
+#define MARGINED 1
+
 // Table model handlers
 static int table_model_num_columns(uiTableModelHandler *h, uiTableModel *m) {
     return 1;
@@ -70,7 +72,11 @@ void* do_break_thread(void* arg) {
 static void on_do_break_clicked(uiButton *b, void *data) {
     ThreadData* thread_data = (ThreadData*)data;
     
+  #if MARGINED
     uiLabelSetText(thread_data->progress_txt, "1st\n2nd");
+  #else
+    uiLabelSetText(thread_data->progress_txt, "1st 2nd");
+  #endif
     uiControlShow(uiControl(thread_data->progress_txt));
     uiControlShow(uiControl(thread_data->progress_bar));
 
@@ -130,7 +136,9 @@ int main(int argc, char **argv) {
 
     // Create the main window (600x400 with no menu bar)
     win = uiNewWindow("Console Log Saver", 600, 400, 0);
+#if MARGINED
     uiWindowSetMargined(win, 1);
+#endif
     
     // Create vertical box
     vbox = uiNewVerticalBox();

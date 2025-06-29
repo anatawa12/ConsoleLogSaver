@@ -155,6 +155,7 @@ int main(int argc, char **argv) {
     // Create security settings group
     security_settings_group = uiNewGroup("Group");
     security_settings_box = uiNewVerticalBox();
+    uiGroupSetMargined(security_settings_group, 1);
     
     unity_version_required = uiNewCheckbox("Checkbox");
     uiControlDisable(uiControl(unity_version_required));

@@ -16,10 +16,8 @@ uuid = { version = "1.11.0", features = ["v4"] }
 regex = "1.11.1"
 whoami = { version = "1.5.2", default-features = false }
 home = "0.5.9"
-rfd = { version = "0.15.1", optional = true }
-sys-locale = { version = "0.3.2", optional = true }
-libui = { git = "https://github.com/libui-rs/libui", version = "0.3.0", rev = '2e5625fe', optional = true }
-arboard = { version = "3.4.1", default-features = false, optional = true }
+tk = { version = "0.1.10", optional = true }
+tcl = { version = "0.1.8", optional = true }
 ureq = { version = "2.12.1", default-features = false, features = ["native-certs", "tls"] }
 open = "5.3.1"
 
@@ -34,7 +32,7 @@ required-features = ['gui']
 
 [features]
 external_debug_server = []
-gui = [ "dep:rfd", "dep:sys-locale", "dep:libui", "arboard" ]
+gui = [ "dep:tk", "dep:tcl" ]
 
 [workspace]
 members = [

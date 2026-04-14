@@ -51,6 +51,9 @@ impl SupportedLocale {
     }
 
     fn detect() -> SupportedLocale {
+        // On Unix-like systems, check standard locale environment variables.
+        // On Windows, this falls back to English since Windows uses a different
+        // locale API; Tk itself handles display correctly in either case.
         for var in &["LC_ALL", "LC_MESSAGES", "LANG"] {
             if let Ok(val) = std::env::var(var) {
                 if val.starts_with("ja") {
@@ -155,6 +158,9 @@ impl Messages {
         }
     }
 }
+
+// Polling interval (ms) for checking background-thread results on the main thread.
+const POLL_INTERVAL_MS: u32 = 100;
 
 // ---------------------------------------------------------------------------
 // Thread-local state (all on the main thread)
@@ -488,6 +494,8 @@ fn main() -> TkResult<()> {
         let m = CURRENT_MESSAGES.with(|cm| *cm.borrow());
 
         // Show file-save dialog (blocks until the user responds).
+        // Build the -filetypes list in Tcl format: {{Label .ext} {All Files *}}
+        // Each pair of {{ }} produces a literal { } in the format string.
         let filetypes = format!("{{{{{} .txt}} {{All Files *}}}}", m.text_files_star_txt);
         let path_obj = interp.eval((
             "tk_getSaveFile",
@@ -659,11 +667,11 @@ fn main() -> TkResult<()> {
             }
         }
 
-        interp.after(100, ("cls_poll_bg",))?;
+        interp.after(POLL_INTERVAL_MS.try_into().unwrap(), ("cls_poll_bg",))?;
         Ok(())
     });
 
-    tk.after(100, ("cls_poll_bg",))?;
+    tk.after(POLL_INTERVAL_MS.try_into().unwrap(), ("cls_poll_bg",))?;
 
     // ── Check for updates in a background thread ───────────────────────────
     {
